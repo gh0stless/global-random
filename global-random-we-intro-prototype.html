@@ -563,12 +563,16 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 /* "Symphonie der Zeit" lyrics, approved by Honey (rights holder). One-shot
    crawl, not a seamless loop: empty at first (track sits fully off past
    the container's right edge), rolls in from the right, crosses, and
-   exits past the left edge. Timing (19s→50s of the actual SONG) is
-   driven from JS, not a CSS animation-delay — see _playWEIntro()'s
-   onUpdate for why a delay counted from click time drifted late in
-   practice. No delay here: the animation starts the instant JS flips
-   display:none→block, timed to land on real song position 19s.
-   translateX(±100%) is relative to the TRACK's OWN width, which is
+   exits past the left edge. Timing is driven from JS (a plain 20s-after-
+   click setTimeout, see _playWEIntro()'s _tickerShowTimer — a CSS
+   animation-delay would work identically here since it's a fixed click-
+   relative offset either way, but keeping it in JS alongside the timer
+   that actually needs to be cancellable on early SKIP INTRO avoids
+   splitting the same concern across two places). No delay here: the
+   animation starts the instant JS flips display:none→block, i.e.
+   exactly at the 20s mark, and runs for its own fixed 31s regardless of
+   the track's actual playback position. translateX(±100%) is relative
+   to the TRACK's OWN width, which is
    always far wider than the container (it's one long line of lyrics) —
    so ±100% reliably clears the container on both ends regardless of
    actual text/viewport width, no JS measurement needed.
@@ -4939,7 +4943,21 @@ function _playWEIntro(){
   $('embed-wrapper').classList.remove('empty');
   _renderWEIntroMeta();
   term('HALLO, HIER SPRICHT WELLE:ERDBALL...');
-  let done=false, fadeStarted=false, tuneStopScheduled=false, tickerShown=false, _tuneStopTimer=null;
+  /* Lyrics ticker: a fixed 20s-after-click timer, deliberately NOT synced
+     to the track's own reported position. An earlier version tried
+     position-based timing (self-correcting against Spotify's load/retry
+     latency, same idea as the tune-fade logic below) — diagnostic
+     logging confirmed it worked exactly as designed (ticker appeared at
+     real song position ~19.1s, dead on target), but that meant total
+     time-since-click varied with however long Spotify took to actually
+     start audio (~2-3s of buffering before position even begins
+     advancing, pushing the visible appearance to ~21-22s after the
+     click). A predictable, click-anchored ~20s was preferred over exact
+     lyric-content sync, so back to a plain click-relative timer —
+     cleared in finish() so an early SKIP INTRO can't leave it to fire
+     later into whatever plays next. */
+  const _tickerShowTimer=setTimeout(()=>{ $('we-footer-scroll').style.display='block'; },20000);
+  let done=false, fadeStarted=false, tuneStopScheduled=false, _tuneStopTimer=null;
   function onUpdate(e){
     const dur=(e.data?.duration??e.duration??0);
     const pos=(e.data?.position??e.position??0);
@@ -4951,24 +4969,6 @@ function _playWEIntro(){
     if(!tuneStopScheduled){
       tuneStopScheduled=true;
       _tuneStopTimer=setTimeout(stopSearchTune,3000);
-    }
-    /* Lyrics ticker: keyed off the track's own reported position, not a
-       setTimeout from the PLAY click — an earlier version used a plain
-       CSS animation-delay counted from click time, which drifted several
-       seconds late in practice because Spotify's own load/retry latency
-       (the tryPlay() dance below) isn't zero, and that latency was
-       silently eating into what was supposed to be a fixed 19s-into-the-
-       SONG mark. Checking pos on every update instead is self-correcting
-       against exactly that drift, the same reasoning as the "last 5s"
-       fade below. display:block (from CSS display:none) starts the
-       we-scroll-left animation fresh at that instant, and since the CSS
-       side no longer carries its own delay, the crawl begins immediately
-       once shown and finishes 31s later — landing close to real song
-       position 50s regardless of when within this polling interval it
-       actually triggered. */
-    if(!tickerShown && pos>=19000){
-      tickerShown=true;
-      $('we-footer-scroll').style.display='block';
     }
     const remaining=dur-pos;
     /* Last 5s of the track: bring the tune up underneath it */
@@ -4982,6 +4982,7 @@ function _playWEIntro(){
   function finish(){
     if(done)return; done=true;
     clearTimeout(_tuneStopTimer); // see this function's own comment on why
+    clearTimeout(_tickerShowTimer); // see its own comment on why
     try{EC.removeListener('playback_update',onUpdate);}catch(_){}
     try{EC.pause();}catch(_){}
     stopSearchTune(); // brief overlap tune stops here — dice sound takes over from playReady()
