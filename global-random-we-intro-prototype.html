@@ -560,25 +560,24 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 #we-footer-inner{display:flex;align-items:center;gap:20px}
 #we-footer-logo{width:clamp(70px,15vw,120px);height:auto;fill:#fff;flex-shrink:0}
 #we-footer-text{font-family:'Courier New',monospace;color:#fff;font-size:.85em;letter-spacing:.04em;margin:0;text-align:left}
-/* "Symphonie der Zeit" lyrics, approved by Honey (rights holder) for this
-   private prototype. One-shot crawl, not a seamless loop: empty at first
-   (track sits fully off past the container's right edge), rolls in from
-   the right, crosses, and exits past the left edge — nothing shown for
-   the track's first 19s, then a 31s crawl from second 19 to second 50.
-   translateX(±100%) is relative to the TRACK's
-   OWN width, which is always far wider than the container (it's one long
-   line of lyrics) — so ±100% reliably clears the container on both ends
-   regardless of actual text/viewport width, no JS measurement needed.
-   animation-fill-mode:both is required, not just forwards: 'forwards' alone
-   only holds the END state after the run — during the delay BEFORE it
-   starts, an animation with a delay renders at its normal unanimated
-   position (transform:none, i.e. text already fully visible) unless
-   'backwards' also applies, which is exactly what would have shown the
-   text immediately instead of empty for those first 19s. 'both' covers
-   the delay (backwards, holds the from-keyframe) and the post-run hold
-   (forwards) in one keyword. */
+/* "Symphonie der Zeit" lyrics, approved by Honey (rights holder). One-shot
+   crawl, not a seamless loop: empty at first (track sits fully off past
+   the container's right edge), rolls in from the right, crosses, and
+   exits past the left edge. Timing (19s→50s of the actual SONG) is
+   driven from JS, not a CSS animation-delay — see _playWEIntro()'s
+   onUpdate for why a delay counted from click time drifted late in
+   practice. No delay here: the animation starts the instant JS flips
+   display:none→block, timed to land on real song position 19s.
+   translateX(±100%) is relative to the TRACK's OWN width, which is
+   always far wider than the container (it's one long line of lyrics) —
+   so ±100% reliably clears the container on both ends regardless of
+   actual text/viewport width, no JS measurement needed.
+   animation-fill-mode:forwards holds the fully-exited end state instead
+   of snapping back to center once the single iteration completes —
+   'backwards' isn't needed since there's no delay to hold through
+   anymore. */
 #we-footer-scroll{display:none;overflow:hidden;white-space:nowrap;margin-top:6px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
-#we-footer-scroll-track{display:inline-block;font-family:'Courier New',monospace;color:#fff9;font-size:.72em;letter-spacing:.03em;animation:we-scroll-left 31s linear 19s 1 both}
+#we-footer-scroll-track{display:inline-block;font-family:'Courier New',monospace;color:#fff9;font-size:.72em;letter-spacing:.03em;animation:we-scroll-left 31s linear forwards}
 @keyframes we-scroll-left{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
 #give-inner{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
 #give-left{display:flex;flex-direction:column;align-items:center;gap:8px}
@@ -4938,10 +4937,9 @@ function _playWEIntro(){
   $('btn').style.display='none';
   $('skip-intro-btn').style.display='';
   $('embed-wrapper').classList.remove('empty');
-  $('we-footer-scroll').style.display='block'; // lyrics ticker: only while the track actually plays (display:'' would NOT override the CSS display:none default — needs a real value); going none→block also (re)starts the CSS animation fresh, which is what gives the 7s-delay-then-crawl its starting point
   _renderWEIntroMeta();
   term('HALLO, HIER SPRICHT WELLE:ERDBALL...');
-  let done=false, fadeStarted=false, tuneStopScheduled=false, _tuneStopTimer=null;
+  let done=false, fadeStarted=false, tuneStopScheduled=false, tickerShown=false, _tuneStopTimer=null;
   function onUpdate(e){
     const dur=(e.data?.duration??e.duration??0);
     const pos=(e.data?.position??e.position??0);
@@ -4953,6 +4951,24 @@ function _playWEIntro(){
     if(!tuneStopScheduled){
       tuneStopScheduled=true;
       _tuneStopTimer=setTimeout(stopSearchTune,3000);
+    }
+    /* Lyrics ticker: keyed off the track's own reported position, not a
+       setTimeout from the PLAY click — an earlier version used a plain
+       CSS animation-delay counted from click time, which drifted several
+       seconds late in practice because Spotify's own load/retry latency
+       (the tryPlay() dance below) isn't zero, and that latency was
+       silently eating into what was supposed to be a fixed 19s-into-the-
+       SONG mark. Checking pos on every update instead is self-correcting
+       against exactly that drift, the same reasoning as the "last 5s"
+       fade below. display:block (from CSS display:none) starts the
+       we-scroll-left animation fresh at that instant, and since the CSS
+       side no longer carries its own delay, the crawl begins immediately
+       once shown and finishes 31s later — landing close to real song
+       position 50s regardless of when within this polling interval it
+       actually triggered. */
+    if(!tickerShown && pos>=19000){
+      tickerShown=true;
+      $('we-footer-scroll').style.display='block';
     }
     const remaining=dur-pos;
     /* Last 5s of the track: bring the tune up underneath it */
