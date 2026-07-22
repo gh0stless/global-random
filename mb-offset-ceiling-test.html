@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MB Offset Ceiling Test</title>
+<style>
+  body{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;
+       padding:20px;font-size:13px;max-width:900px;margin:0 auto}
+  h1{color:#00ff41;font-size:1.2em;margin-bottom:4px}
+  .sub{color:#00831e;font-size:.85em;margin-bottom:20px;line-height:1.5}
+  button{background:#111;color:#00ff41;border:1px solid #00ff41;padding:8px 16px;
+         font-family:inherit;cursor:pointer;margin-bottom:16px}
+  button:hover{background:#00ff4122}
+  button:disabled{opacity:.4;cursor:default}
+  table{border-collapse:collapse;width:100%;margin-top:10px}
+  th,td{padding:4px 10px;text-align:left;border-bottom:1px solid #00ff4122}
+  th{color:#00ff41;border-bottom:1px solid #00ff41}
+  .ok{color:#00ff41}
+  .fail{color:#ff5555}
+  #status{margin-bottom:12px;font-size:.95em;color:#0891b2}
+  #summary{margin-top:16px;font-size:1em;color:#f59e0b;white-space:pre-line;
+           border-top:1px solid #00ff4133;padding-top:12px}
+</style>
+</head>
+<body>
+<h1>MusicBrainz URL-Search Offset Ceiling Test</h1>
+<div class="sub">
+Testet dieselbe Query-Form wie mbRandomSearch() im Hauptprojekt (<code>url?query=open.spotify.com/track&offset=N</code>),
+um die praktische Obergrenze von MB's Such-API zu finden — wo hören die Ergebnisse auf, egal wie tief man geht?<br>
+Phase 1: exponentielles Hochtasten (0 → 10k → 100k → 1M → 10M...) bis zum ersten Fehlschlag.<br>
+Phase 2: binäre Suche zwischen letztem Erfolg und erstem Fehlschlag für die exakte Grenze.<br>
+MB Rate-Limit: 1,3s pro Anfrage — kann je nach Ergebnis einige Minuten dauern.
+</div>
+<button id="startBtn" onclick="runTest()">Test starten</button>
+<div id="status">Bereit.</div>
+<table>
+  <thead><tr><th>Offset</th><th>Ergebnis</th><th>Treffer</th><th>Phase</th></tr></thead>
+  <tbody id="results"></tbody>
+</table>
+<div id="summary"></div>
+
+<script>
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+let lastReq = 0;
+
+async function mbFetch(url){
+  const wait = 1300 - (Date.now()-lastReq);
+  if(wait>0) await sleep(wait);
+  lastReq = Date.now();
+  for(let attempt=0; attempt<=2; attempt++){
+    try{
+      const res = await fetch(url, {headers:{Accept:'application/json'}});
+      if((res.status===429||res.status>=500) && attempt<2){
+        await sleep(res.status===429?4000:1500*(attempt+1));
+        continue;
+      }
+      return {status:res.status, ok:res.ok, json: res.ok ? await res.json() : null};
+    }catch(e){
+      if(attempt<2){ await sleep(1500*(attempt+1)); continue; }
+      return {status:-1, ok:false, json:null, error:e.message};
+    }
+  }
+}
+
+/* Exact same query shape as mbRandomSearch() in the main project */
+async function testOffset(offset){
+  const q = 'open.spotify.com/track';
+  const url = `https://musicbrainz.org/ws/2/url?query=${encodeURIComponent(q)}&limit=25&offset=${offset}&fmt=json`;
+  const r = await mbFetch(url);
+  if(!r.ok){
+    return {success:false, count:0, reason:`HTTP ${r.status}${r.error?': '+r.error:''}`};
+  }
+  const urls = (r.json.urls ?? []).filter(u=>u.resource?.includes('open.spotify.com/track/'));
+  return {success:urls.length>0, count:urls.length, reason: urls.length>0?'':'0 Treffer (leer, aber kein Fehler)'};
+}
+
+function addRow(offset, result, phase){
+  const tbody = document.getElementById('results');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${offset.toLocaleString('de-DE')}</td>
+    <td class="${result.success?'ok':'fail'}">${result.success?'✓ OK':'✗ '+result.reason}</td>
+    <td>${result.count}</td>
+    <td>${phase}</td>`;
+  tbody.appendChild(tr);
+  tbody.scrollIntoView({block:'end'});
+}
+
+async function runTest(){
+  document.getElementById('startBtn').disabled = true;
+  const statusEl = document.getElementById('status');
+
+  /* Phase 1: exponential climb — 10k, 100k, 1M, 10M, 100M... */
+  statusEl.textContent = 'Phase 1: exponentielles Hochtasten...';
+  let lastGood = 0;
+  let firstBad = null;
+  let offset = 10000;
+
+  while(offset < 1e9){ // hard safety ceiling, MB won't realistically have this many
+    statusEl.textContent = `Phase 1: teste Offset ${offset.toLocaleString('de-DE')}...`;
+    const result = await testOffset(offset);
+    addRow(offset, result, 'Hochtasten');
+    if(result.success){
+      lastGood = offset;
+      offset *= 10;
+    }else{
+      firstBad = offset;
+      break;
+    }
+  }
+
+  if(firstBad === null){
+    statusEl.textContent = 'Fertig — kein Fehlschlag gefunden bis zur Sicherheitsgrenze.';
+    document.getElementById('summary').textContent =
+      `Kein Limit gefunden bis Offset ${offset.toLocaleString('de-DE')} — MB's Grenze liegt (falls vorhanden) höher als getestet.`;
+    document.getElementById('startBtn').disabled = false;
+    return;
+  }
+
+  /* Phase 2: binary search between lastGood and firstBad */
+  statusEl.textContent = 'Phase 2: binäre Suche für exakte Grenze...';
+  let lo = lastGood, hi = firstBad;
+  while(hi - lo > 1000){ // stop refining once within 1000 of the exact edge
+    const mid = Math.floor((lo+hi)/2);
+    statusEl.textContent = `Phase 2: teste Offset ${mid.toLocaleString('de-DE')} (Bereich ${lo.toLocaleString('de-DE')}–${hi.toLocaleString('de-DE')})...`;
+    const result = await testOffset(mid);
+    addRow(mid, result, 'Bin.Suche');
+    if(result.success) lo = mid;
+    else hi = mid;
+  }
+
+  statusEl.textContent = 'Fertig.';
+  document.getElementById('summary').textContent =
+`ERGEBNIS:
+Letzter erfolgreicher Offset: ~${lo.toLocaleString('de-DE')}
+Erster fehlgeschlagener Offset: ~${hi.toLocaleString('de-DE')}
+→ Die praktische Grenze liegt zwischen diesen beiden Werten.
+
+Zum Vergleich: unser aktueller Startwert im Hauptprojekt ist 100.000
+(_mbOffsetCeiling), der sich während der Session nach oben tastet.`;
+  document.getElementById('startBtn').disabled = false;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLOBAL RANDOM — Democracy of Sound</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+:root {
+    --bg: #070907;
+    --bg-raised: #0d110d;
+    --fg: #d8ded8;
+    --accent: #00ff41;
+    --accent-dim: #00ff4133;
+    --accent2: #3e31a2;
+    --muted: #5a6b5a;
+    --rule: #1a201a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 300;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent); color: #000; }
+
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-dim); }
+a:hover { border-bottom-color: var(--accent); }
+
+/* ── Ambient flag/code stream ── */
+.random-stream {
+    position: fixed;
+    top: 0; left: 0; width: 100%;
+    pointer-events: none;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    color: var(--accent-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    padding: 6px 0;
+    z-index: 0;
+}
+
+/* ── Hero / boot sequence ── */
+header {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+    padding: 20px;
+}
+
+#boot {
+    font-family: "Space Mono", monospace;
+    font-size: clamp(0.85rem, 2.4vw, 1.05rem);
+    color: var(--accent);
+    min-height: 1.6em;
+    letter-spacing: 0.08em;
+}
+#boot .cursor {
+    display: inline-block;
+    width: 0.55em;
+    background: var(--accent);
+    animation: blink 1s steps(1) infinite;
+    margin-left: 2px;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+h1 {
+    font-family: "Space Mono", monospace;
+    font-size: clamp(2.4rem, 8vw, 4.2rem);
+    letter-spacing: 0.18em;
+    margin: 0.6em 0 0;
+    color: var(--accent);
+    opacity: 0;
+    text-shadow: 0 0 24px var(--accent-dim);
+}
+h1.show { opacity: 1; transition: opacity 1.1s ease; }
+
+h2.subtitle {
+    font-weight: 300;
+    font-size: clamp(0.95rem, 2.6vw, 1.3rem);
+    color: var(--muted);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-top: 1em;
+    opacity: 0;
+}
+h2.subtitle.show { opacity: 1; transition: opacity 1.1s ease 0.3s; }
+
+.scroll-hint {
+    position: absolute;
+    bottom: 34px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    opacity: 0;
+    animation: fadein 1s ease 2s forwards, updown 2.4s ease-in-out 3s infinite;
+}
+@keyframes fadein { to { opacity: 0.6; } }
+@keyframes updown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+/* ── Main content ── */
+main {
+    max-width: 760px;
+    margin: auto;
+    padding: 90px 24px 40px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Meta / colophon card */
+.colophon {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--muted);
+    background: var(--bg-raised);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 18px 22px;
+    margin-bottom: 64px;
+    line-height: 1.9;
+}
+.colophon .label { color: var(--accent); margin-right: 0.6em; }
+.colophon div { display: flex; gap: 0.6em; flex-wrap: wrap; }
+
+h3.section-title {
+    font-family: "Space Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin: 4.5rem 0 1.6rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--rule);
+}
+h3.section-title:first-of-type { margin-top: 0; }
+
+p { margin: 0 0 1.5em; font-weight: 300; font-size: 1rem; }
+
+.work {
+    color: var(--fg);
+    font-style: normal;
+    border-bottom: 1px dotted var(--accent-dim);
+}
+
+blockquote {
+    margin: 3rem 0;
+    padding: 0.2rem 0 0.2rem 1.4rem;
+    border-left: 2px solid var(--accent);
+    color: var(--fg);
+    font-family: "Space Mono", monospace;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+blockquote cite {
+    display: block;
+    margin-top: 0.7rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-style: normal;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+/* Stat strip for the numbers paragraph */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin: 2.4rem 0 2.8rem;
+}
+.stat {
+    background: var(--bg);
+    padding: 20px 16px;
+    text-align: center;
+}
+.stat .n {
+    display: block;
+    font-family: "Space Mono", monospace;
+    font-size: 1.7rem;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+}
+.stat .l {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.contrast-bar {
+    margin: 1.8rem 0 2.6rem;
+    font-family: "Space Mono", monospace;
+    font-size: 0.8rem;
+}
+.contrast-bar .row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.contrast-bar .country { width: 90px; flex-shrink: 0; color: var(--muted); }
+.contrast-bar .bar-track { flex: 1; height: 8px; background: var(--rule); position: relative; }
+.contrast-bar .bar-fill { height: 100%; background: var(--accent); }
+.contrast-bar .val { width: 70px; text-align: right; flex-shrink: 0; color: var(--fg); }
+
+hr.divider {
+    border: none;
+    text-align: center;
+    margin: 4rem 0;
+    color: var(--accent-dim);
+    font-family: "Space Mono", monospace;
+    letter-spacing: 0.6em;
+}
+hr.divider::before { content: "· · ·"; }
+
+.donate-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0.4em;
+    padding: 10px 20px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: "Space Mono", monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+}
+.donate-cta:hover { background: var(--accent-dim); }
+
+.colophon-end {
+    margin-top: 5rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: "IBM Plex Mono", monospace;
+}
+
+/* Usage manual */
+.manual {
+    counter-reset: step;
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+.manual li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 1.8rem 2.6rem;
+    border-left: 1px solid var(--rule);
+    margin-left: 0.5rem;
+}
+.manual li:last-child { border-left: 1px solid transparent; padding-bottom: 0; }
+.manual li::before {
+    content: counter(step);
+    position: absolute;
+    left: -0.9rem;
+    top: -0.1rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Space Mono", monospace;
+    font-size: 0.8rem;
+}
+.manual .m-title {
+    display: block;
+    color: var(--fg);
+    font-weight: 500;
+    margin-bottom: 0.3em;
+}
+.manual .m-body { color: var(--muted); font-size: 0.92rem; }
+.manual .m-body strong { color: var(--fg); font-weight: 500; }
+
+footer {
+    padding: 36px 24px 50px;
+    text-align: center;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+    position: relative;
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #boot .cursor, .scroll-hint { animation: none; }
+    h1, h2.subtitle { opacity: 1 !important; transition: none; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="random-stream" id="stream"></div>
+
+<header>
+    <div id="boot"></div>
+    <h1 id="title">GLOBAL RANDOM</h1>
+    <h2 class="subtitle" id="subtitle">Democracy of Sound</h2>
+    <div class="scroll-hint">↓ scroll</div>
+</header>
+
+<main>
+
+<div class="colophon">
+    <div><span class="label">Werk</span> Browserbasierte Netzinstallation, 2026</div>
+    <div><span class="label">Technik</span> eine HTML-Datei (HTML5, CSS, JS), muss auf https-Webspace gehostet sein</div>
+    <div><span class="label">Quellen</span> MusicBrainz · Spotify · MyMemory · Wikipedia/Wikidata · Open-Meteo</div>
+</div>
+
+<h3 class="section-title">Werkbeschreibung</h3>
+
+<p>Streamingdienste hören mit. Sie merken sich, was wir mögen, und geben uns mehr davon. So entsteht eine Schleife: Wer viel hört, hört immer Ähnliches. <span class="work">GLOBAL RANDOM</span> durchbricht diese Schleife. Das Werk wählt Musik nicht nach Geschmack, sondern nach Zufall — echtem Zufall, gezogen aus Millionen Titeln, die MusicBrainz dokumentiert und die auf Spotify liegen. Die Verknüpfung zwischen einem MusicBrainz-Eintrag und dem passenden Spotify-Titel stammt dabei nicht von einem Algorithmus, sondern von echten, freiwilligen Editoren der MusicBrainz-Community — von Menschenhand kuratiert, nicht von einer Maschine erraten.</p>
+
+<p>Der Titel sagt, worum es geht: Democracy of Sound. Demokratie heißt hier nicht Mehrheit, sondern Los. Jedes Land bekommt eine Chance — Kasachstan so gut wie die USA, Jamaika so gut wie Großbritannien. Ein eigener Mechanismus sorgt dafür, dass kein Land den Pool dominiert, selbst wenn die Datenbank selbst schief verteilt ist. Reiner Zufall wäre nicht fair — er würde die Schieflage der Daten nur kopieren. Also greift das Werk ein, leise, aber entschieden.</p>
+
+<blockquote>Demokratie heißt hier nicht Mehrheit, sondern Los.</blockquote>
+
+<p>Das ist keine neue Idee. Im antiken Athen wählte man die meisten Ämter nicht — man verloste sie. Ein Gerät aus Ton, das Kleroterion, entschied. Das war kein Nebenaspekt der Demokratie, das war ihr Kern. Wahl bevorzugt, wer bekannt ist, wer Geld hat, wer gut redet. Das Los behandelt jeden gleich. <span class="work">GLOBAL RANDOM</span> steht in dieser alten Tradition — nicht in der modernen, wo Demokratie Mehrheit heißt.</p>
+
+<p>Das Los ist uralt, und es ist überall. Das chinesische I Ging deutet Schafgarbenstängel seit über zweitausend Jahren. Das Ifá-Orakel der Yoruba in Westafrika liest Palmnüsse, bis heute, millionenfach. Die Bibel lässt den zwölften Apostel auslosen. Menschen an ganz verschiedenen Orten der Welt kamen unabhängig voneinander auf dieselbe Idee: Wo der Mensch nicht entscheiden soll oder kann, soll das Los entscheiden. Die Idee ist nicht ausgestorben. Sie steckt in jeder Jury, die aus zufällig geladenen Bürgern besteht. Sie steckt in den Bürgerräten, die heute wieder Konjunktur haben — Irland, Frankreich, Ostbelgien. Auch das: eine Wiederbelebung des Loses gegen die reine Mehrheitsherrschaft.</p>
+
+<p>Nicht jeder Zufall galt gleich viel. Mittelalterliche Prediger unterschieden streng zwischen dem gesegneten Los und dem Teufelswürfel. Wer eine Frage ans Schicksal stellte, mit der Bibel, mit den Sortes Sanctorum, blieb meist unbehelligt. Wer um Geld würfelte, spielte, wie ein Prediger es nannte, mit "Decius" statt mit "Deus" — ein Wortspiel, das den Würfeltisch zum Altar für den Teufel erklärte. Der Unterschied lag nie im Mechanismus. Zufall bleibt Zufall. Er lag in der Absicht: sucht man Führung, oder will man gewinnen? <span class="work">GLOBAL RANDOM</span> verspricht keinen Gewinn. Es fällt klar auf die alte, geduldete Seite dieser Unterscheidung.</p>
+
+<hr class="divider">
+
+<p>Warum ist die Datenbank überhaupt schief? Nicht nur, weil reiche Länder mehr Musikindustrie haben. Musik verbreitet sich verschieden, je nachdem, wo man lebt. Wer in Berlin oder New York Musik macht, lädt fast automatisch bei einem Streaming-Dienst hoch. Wer in vielen anderen Teilen der Welt Musik macht, tut das oft anders: auf Kassette, über Messenger-Apps, im Lokalradio, live beim Fest — nie auf einer Plattform, nie katalogisiert. <span class="work">GLOBAL RANDOM</span> zieht nur aus dem Teil der Welt, der den Sprung auf Spotify schon geschafft hat. Das ist eine Grenze, keine Lüge. Das Werk zeigt nicht alle Musik der Welt. Es zeigt, was die digitale Welt von ihr eingefangen hat.</p>
+
+<p>Zahlen machen das greifbarer als jede Beschreibung:</p>
+
+<div class="stats">
+    <div class="stat"><span class="n">87</span><span class="l">Sprachen</span></div>
+    <div class="stat"><span class="n">247</span><span class="l">Länder & Territorien</span></div>
+    <div class="stat"><span class="n">1,09 Mio.</span><span class="l">Künstler</span></div>
+</div>
+
+<div class="contrast-bar">
+    <div class="row">
+        <span class="country">USA</span>
+        <span class="bar-track"><span class="bar-fill" style="width:100%"></span></span>
+        <span class="val">223.078</span>
+    </div>
+    <div class="row">
+        <span class="country">Somalia</span>
+        <span class="bar-track"><span class="bar-fill" style="width:0.5%"></span></span>
+        <span class="val">44</span>
+    </div>
+</div>
+
+<p>Der Zufall gleicht das nicht vollständig aus — er zeigt es nur ehrlicher, als ein Algorithmus es je täte.</p>
+
+<p>Man sieht das auf dem Bildschirm: Titel fallen wie Schnee, jeder in bis zu 87 Sprachen übersetzt, in Echtzeit. Die Wörter kommen, überlagern sich, verschwinden wieder. Man kann sie nicht alle lesen. Das ist Absicht. Kultur ist gleichzeitig, an vielen Orten, in vielen Sprachen — kein Mensch fasst das auf einmal.</p>
+
+<p>Die Optik zitiert alte Computer: grüne Schrift, Terminal-Zeilen, ein Font wie vom C64. Das ist kein Zufall. Schon in den sechziger Jahren bauten Künstler wie Cage oder Xenakis den Zufall in ihre Musik ein — mit Münzwürfen, mit dem I Ging, mit Wahrscheinlichkeitsrechnung. Die frühen Computer trieben diese Idee weiter.</p>
+
+<p>Auch die Einstürzenden Neubauten gehören in diese Linie. Ihr System heißt Dave — benannt nach der Stimme des ersten Navigationsgeräts, das Blixa Bargeld je besaß. Eine Kiste mit 600 Karten, jede mit einer Anweisung: ein Instrument, eine Spielweise, manchmal nur ein Wort wie "Zufall". Vor dem Spiel zieht jeder ein paar Karten und folgt, was draufsteht. Offen für Interpretation, aber vom Los bestimmt — nicht der Musiker allein entscheidet, was als Nächstes kommt. <span class="work">GLOBAL RANDOM</span> stellt sich in diese Reihe — und zugleich gegen die Plattformen von heute, die genau das Gegenteil tun: alles vorhersagen, nichts dem Zufall überlassen.</p>
+
+<hr class="divider">
+
+<p>Wer will, kann <span class="work">GLOBAL RANDOM</span> auch wie ein Tarot benutzen. Karten legen, Solitär spielen, das I Ging befragen — Menschen haben Zufallsverfahren immer schon genutzt, um eine Frage ans Schicksal zu stellen. Bei diesem Werk kommt die Antwort nicht als Karte, sondern als Songtitel. Manchmal banal. Manchmal, zufällig, seltsam genau.</p>
+
+<p>Das kennt jeder vom Radio: ein Song läuft, und er passt genau zur Situation, in der man gerade steckt. Meist steckt dahinter nur ein Redakteur, der irgendeinen Geschmack hatte, und ein Zufall, der die eigene Lage mit fremder Auswahl kollidieren ließ. Bei <span class="work">GLOBAL RANDOM</span> fehlt sogar der Redakteur. Niemand hat den Titel für einen ausgesucht. Was bleibt, ist der Zufall allein — ohne fremde Absicht, die man ihm nachträglich unterstellen könnte.</p>
+
+<p>Wer zuhört, kann auch spenden. Ein Klick führt zu GiveDirectly — Geld geht direkt an Menschen in extremer Armut, ohne Umweg. Das ist kein Zusatz, sondern Teil der Idee. Der Zufall zeigt: Musik kommt von überall gleich. Die Welt selbst ist nicht so gerecht. Wer das hört, kann etwas dagegen tun.</p>
+
+<p><a class="donate-cta" href="https://www.givedirectly.org/donate/" target="_blank" rel="noopener">→ GiveDirectly.org</a></p>
+
+<p>Wer will, macht aus <span class="work">GLOBAL RANDOM</span> auch ein echtes Werkzeug zur Horizonterweiterung. Ein Fund, der hängen bleibt, lässt sich mit einem Klick auf das "+"-Symbol im eingebetteten Spotify-Player dauerhaft im eigenen Spotify-Konto speichern, in den eigenen Favoriten, nicht nur für den Moment. Von dort aus lässt sich weiterverfolgen: der Künstler, das Album, die Nachbarschaft im Katalog. Der Zufall liefert nur den ersten Kontakt. Was danach kommt, liegt wieder bei einem selbst.</p>
+
+<h3 class="section-title">Bedienung</h3>
+
+<ol class="manual">
+    <li>
+        <span class="m-title">Starten</span>
+        <span class="m-body">Auf die rote Pille klicken. Ein kurzes Radiotuning-Geräusch ist zu hören, während das Werk im Hintergrund die ersten drei vollständigen Kandidaten sucht. Sobald <strong>READY.</strong> im Status-Kasten steht, auf <strong>PLAY</strong> klicken — dann geht's los.</span>
+    </li>
+    <li>
+        <span class="m-title">Am Desktop: Vollbildmodus empfohlen</span>
+        <span class="m-body"><strong>F11</strong> drücken für den Vollbildmodus des Browsers — die vier Länder-Matrizen und der C64-Terminal-Bereich brauchen etwas Platz, um ihre volle Wirkung zu entfalten.</span>
+    </li>
+    <li>
+        <span class="m-title">Für volle Titel statt 30-Sekunden-Ausschnitten: vorher bei Spotify einloggen</span>
+        <span class="m-body"><strong>open.spotify.com</strong> in einem separaten Tab öffnen und dort einloggen, bevor man <span class="work">GLOBAL RANDOM</span> startet — ein normaler Account genügt, Premium ist nicht nötig, und es läuft keine Werbung. Beim Einloggen schlägt der Browser wiederholt vor, stattdessen die <strong>Spotify-App</strong> zu öffnen — das konsequent ignorieren und im Browser einloggen. Ein grünes Häkchen im Fußbereich von <span class="work">GLOBAL RANDOM</span> bestätigt den erfolgreichen Login; danach sollten keine Vorschau-Ausschnitte mehr auftauchen, nur noch vollständige Titel. Der Spotify-Tab selbst kann danach wieder geschlossen werden — nur abmelden sollte man sich dort nicht, sonst verliert der eingebettete Player im Hintergrund seinen Zugriff.</span>
+    </li>
+    <li>
+        <span class="m-title">Gefallene Funde festhalten</span>
+        <span class="m-body">Im eingebetteten Spotify-Player oben rechts das "+"-Symbol anklicken — der Track landet direkt in deinem eigenen Spotify-Konto, in deinen Favoriten (Lieblingssongs), dauerhaft und nicht nur für diese Sitzung. Von dort aus lässt sich der Künstler, das Album oder die nähere Umgebung im Katalog in aller Ruhe weiter erkunden.</span>
+    </li>
+    <li>
+        <span class="m-title">Browser &amp; mögliche Störfaktoren</span>
+        <span class="m-body">Läuft in allen gängigen Browsern (Chrome, Firefox, Edge; Safari bislang nicht getestet). Ein aktives VPN kann gelegentlich die Verbindung zum eingebetteten Spotify-Player stören — bleibt der Ton ganz aus, hilft oft, das VPN kurz zu deaktivieren. Bleibt es trotz Login aus Schritt 3 bei 30-Sekunden-Ausschnitten: In Firefox blockiert der <strong>"Verbesserte Trackingschutz"</strong> (Total Cookie Protection) standardmäßig, dass der eingebettete Spotify-Player auf seine eigenen Login-Cookies aus dem separaten Tab zugreifen darf — Browser blockt hier quasi sich selbst aus Datenschutzgründen aus. Fix: Schild-Symbol links in der Adressleiste anklicken und den Schutz für diese Seite deaktivieren.</span>
+    </li>
+    <li>
+        <span class="m-title">Auf dem Handy: nur 30-Sekunden-Vorschau möglich</span>
+        <span class="m-body">Der Spotify-Login-Trick aus Schritt 3 funktioniert auf dem Handy nicht — das ist eine Einschränkung von Spotify selbst, keine von <span class="work">GLOBAL RANDOM</span>. Mobil bleibt es bei kurzen 30-Sekunden-Ausschnitten; zusätzliche Elemente wie die Info-Karten oder der Schneefall der Titel in bis zu 87 Sprachen sind dort ebenfalls deaktiviert, um die Bedienung schlank zu halten.</span>
+    </li>
+</ol>
+
+<h3 class="section-title">Hintergrund</h3>
+
+<p>Der Zufall trägt für den Künstler noch einen zweiten Sinn, einen persönlichen — auch wenn er bewusst offenlässt, wer oder was genau dahintersteckt. Eine mögliche Lesart: Gott gab dem Menschen den freien Willen. Wer freien Willen gibt, greift nicht mehr direkt ein — sonst wäre der Wille nicht frei. Wer oder was auch immer dahintersteht, kann die Welt also nicht steuern, ohne diese Freiheit zu brechen — wirkt es trotzdem, dann eher durch den Zufall. Jedes Los, jeder Wurf, jede zufällige Fügung — ein möglicher Weg, auf dem etwas handeln kann, ohne den menschlichen Willen anzutasten. Ob das Gott ist, ein Gegenspieler, oder etwas, das sich jeder Benennung entzieht: <span class="work">GLOBAL RANDOM</span> macht den Gedanken hörbar, ohne ihn zu behaupten. Der Zufall, der hier über die Musik entscheidet, ist mehr als ein technisches Prinzip — er lässt offen, wessen Hand, wenn überhaupt eine, im Spiel ist.</p>
+
+<p>Dieser Gedanke steht nicht für sich allein. Der Physiker William Pollard — zugleich episkopalischer Priester — hat ihn 1958 in seinem Buch "Chance and Providence" ausgearbeitet: Weil die Quantenmechanik echten, nicht nur scheinbaren Zufall kennt, gibt es im Universum tatsächlich offene Stellen, an denen sich wirken ließe, ohne Naturgesetze zu brechen oder fremden Willen zu überschreiben. Das Forschungsfeld dazu heißt heute "Divine Action" und wird von Physikern wie Robert John Russell oder John Polkinghorne bis heute weitergedacht.</p>
+
+<p>Noch älter ist die Idee bei Thomas von Aquin im 13. Jahrhundert: Was aus menschlicher Sicht Zufall ist, schließt göttliche Vorsehung nicht aus — im Gegenteil. Gerade die Zufälligkeit aus der eigenen, begrenzten Perspektive kann genau der Kanal sein, durch den sich Vorsehung entfaltet, ohne je als Eingriff erkennbar zu werden.</p>
+
+<p>Einstein sagte: Gott würfelt nicht. Die Physik gab ihm unrecht — der Würfel ist echt, kein verborgener Mechanismus dahinter. Aber vielleicht hatte Einstein trotzdem recht, nur anders, als er meinte. Vielleicht würfelt Gott wirklich nicht. Vielleicht nutzt er den echten Würfel nur als Tarnung.</p>
+
+<blockquote>Der Zufall bleibt Zufall. Nur der Sinn dahinter bleibt verborgen.</blockquote>
+
+<p>Auch für Computer ist echter Zufall ein Problem, eines der schwierigsten der Informatik überhaupt. Ein Computer ist eine deterministische Maschine: gleiche Eingabe, immer gleiche Ausgabe. Reinen Zufall gibt es darin eigentlich nicht. Was Programme wie dieses nutzen, heißt Pseudozufall — ein Algorithmus, der zufällig aussieht, aber, kennt man den Startwert, vollständig berechenbar bleibt. Für ein Kunstwerk reicht das. Für eine Verschlüsselung nicht — dort braucht es echte Entropie, aus Rauschen, aus radioaktivem Zerfall, aus Lavalampen vor einer Kamera. <span class="work">GLOBAL RANDOM</span> nutzt die einfache Zufallsfunktion des Browsers. Ehrlich genug für Kunst, zu schwach für ein Tresorschloss.</p>
+
+<p>Wer's genauer wissen will: Unter der Haube laufen zwei Prozesse nebeneinander her. Im Hintergrund durchkämmt das Werk fortlaufend einen zufälligen Ausschnitt aus MusicBrainz' Datenbank — nicht der Reihe nach, sondern mit zufälligem Offset, damit jede Ecke des Katalogs eine echte Chance hat. Daraus füllt sich, nach demselben Fairness-Prinzip gewichtet, ein Pool pro Land mit maximal sechs wartenden Kandidaten; ältere Kandidaten rutschen wieder raus, der Pool bleibt immer frisch.</p>
+
+<p>Die Wiedergabe selbst läuft in ihrem eigenen Takt, unabhängig davon: Ein Würfelwurf entscheidet, welcher von drei Kandidaten in der Warteschlange jetzt gespielt wird. Kurz nachdem die Wiedergabe bestätigt angelaufen ist — vier bis acht Sekunden später —, würfelt das Werk den frei gewordenen Platz in der Warteschlange gleich wieder nach: welches Land, welcher Kandidat daraus. Erst wenn der Titel zu Ende ist, wird erneut gewürfelt, wer von den (wieder vollen) drei Kandidaten als Nächstes läuft.</p>
+
+<p>Vier unabhängige Zufallsebenen also — welcher Ausschnitt der Datenbank überhaupt durchsucht wird, welches Land beim Nachrücken den freien Platz bekommt, welcher Kandidat aus dessen Warteliste dafür gezogen wird, und welcher der wartenden Kandidaten am Ende tatsächlich gespielt wird — nicht nur eine.</p>
+
+<p>Und noch ein Detail, das die Sache nah am Orakel hält, nicht an der Playlist: Man kann sich die drei Kandidaten in der Warteschlange wie drei verdeckte Karten vorstellen, die nebeneinanderliegen. Aufgedeckt wird immer nur eine — welche, entscheidet der Würfel nicht Minuten oder Stunden im Voraus, sondern buchstäblich im letzten Moment, unmittelbar bevor der neue Track zu hören ist. Kaum liegt sie offen, rutscht schon eine neue verdeckte Karte nach. Keine Antwort liegt vorbereitet in der Schublade. Sie entsteht erst, wenn die Frage gerade gestellt wird — wie beim Tarot von vorhin, nur dass hier niemand die Karte vorab kennt, nicht mal das Werk selbst.</p>
+
+<p>Ein Nebeneffekt dieses Aufbaus: Gleich zu Beginn einer Sitzung ist die Auswahl oft von wenigen Ländern geprägt — einfach weil erst wenige MusicBrainz-Ausschnitte durchgekämmt wurden. Wer das Werk über Stunden laufen lässt, merkt: die selteneren Länder-Pools füllen sich nach und nach mit, und die Musik wird zunehmend vielfältiger. Geduld wird hier wörtlich belohnt.</p>
+
+<p>Und noch etwas: <span class="work">GLOBAL RANDOM</span> ist eine einzige Datei — HTML, CSS und JavaScript in einem, ohne eigenes Backend, ohne Datenbank, ohne Account-System. Kein Server im Sinne von "läuft irgendwo für dich" — nur ein simples <code>https://</code>-Webspace, auf das man die Datei legt, muss es sein, damit der Spotify-Player im Browser überhaupt mitspielt (lokal per Doppelklick geöffnet, verweigert Spotify aus Sicherheitsgründen die volle Wiedergabe). Wer die Datei hat, kann sie weitergeben, kopieren, auf jeden x-beliebigen Webspace hochladen. Das ist die politischste Entscheidung der ganzen Arbeit — sie verweigert sich nicht nur dem Algorithmus, sondern auch der Abhängigkeit von einer bestimmten Plattform, die dieses Werk zeigen könnte.</p>
+
+<p>Ein kleiner, nicht eingeplanter Treppenwitz zum Schluss: Wer <span class="work">GLOBAL RANDOM</span> über den eigenen Spotify-Account laufen lässt, füttert nebenbei live Spotifys eigenen Empfehlungsalgorithmus — mit einem Hörprofil, das sich schlicht nicht modellieren lässt. Ein Track aus Israel, dann Puerto Rico, dann eine Sinfonie von Strauss, dann ASMR, dann Nordkorea. Kein Machine-Learning-Modell der Welt findet darin ein Muster für „was schlage ich als Nächstes vor". Der Untertitel des Werks, „Der Kampf gegen den Algorithmus hat begonnen", war ursprünglich als Haltung gemeint, nicht als technische Ansage — er ist trotzdem wahr geworden, nur eine Ebene tiefer als geplant: Man sabotiert live genau das System, gegen das die Installation konzeptionell antritt. Nicht durch Verweigerung. Durch Überforderung mit echter Vielfalt.</p>
+
+<p>Manche werden im zufällig gezogenen Titel eine Botschaft erkennen. Psychologen nennen das eine Beziehungsidee: Die Welt scheint plötzlich zu einem zu sprechen. In milder Form kennt das fast jeder — beim Radio, beim Blick auf die Uhr, beim zufällig aufgeschlagenen Buch. Das ist Teil der Einladung des Werks — und zugleich ein sehr menschliches, sehr altes Muster, dem Zufall Bedeutung zu geben. Wer sich davon stärker berührt fühlt, als ihm guttut, darf das Werk jederzeit einfach schließen.</p>
+
+<div class="colophon-end">Konzept, künstlerische Idee: Andreas S. (gh0stless) · KI-assistiert von Claude (FUCKUP — First Universal Cybernetic-Kinetic-Ultramicro-Programmer) · 2026</div>
+<div class="colophon-end" style="margin-top:6px;font-size:.85em;opacity:.75">CC BY-NC-SA 4.0 — Weitergabe frei, nicht-kommerziell, Namensnennung erforderlich.</div>
+
+</main>
+
+<footer>
+GLOBAL RANDOM — 2026 — Konzept: Andreas S. (gh0stless) — CC BY-NC-SA 4.0
+</footer>
+
+<script>
+/* ── Boot sequence, mirrors the actual player's terminal text ── */
+const bootLines = ["GLOBAL RANDOM v1.0", "SEARCHING...", "READY."];
+const bootEl = document.getElementById("boot");
+const titleEl = document.getElementById("title");
+const subtitleEl = document.getElementById("subtitle");
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function typeLine(text, el) {
+    el.textContent = "";
+    const cursor = document.createElement("span");
+    cursor.className = "cursor";
+    for (const ch of text) {
+        el.textContent += ch;
+        await sleep(38 + Math.random() * 30);
+    }
+    el.appendChild(cursor);
+    await sleep(420);
+    el.removeChild(cursor);
+}
+
+async function boot() {
+    for (const line of bootLines) {
+        await typeLine(line, bootEl);
+        await sleep(260);
+    }
+    bootEl.style.opacity = "0.35";
+    titleEl.classList.add("show");
+    await sleep(250);
+    subtitleEl.classList.add("show");
+}
+boot();
+
+/* ── Ambient stream: real country codes + flags from the piece's world ── */
+const codes = ["KZ","US","JM","GB","SO","DE","JP","IN","BR","EG","IL","FR","NO","VN","KE","SE","TH","MX","NG","CA"];
+function flagEmoji(code) {
+    return [...code.toUpperCase()].map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join("");
+}
+const streamEl = document.getElementById("stream");
+function randStream() {
+    let out = "";
+    for (let i = 0; i < 26; i++) {
+        const c = codes[Math.floor(Math.random() * codes.length)];
+        out += flagEmoji(c) + " " + c + "   ";
+    }
+    return out;
+}
+setInterval(() => { streamEl.textContent = randStream(); }, 2200);
+randStream();
+streamEl.textContent = randStream();
+</script>
+
+</body>
+</html>

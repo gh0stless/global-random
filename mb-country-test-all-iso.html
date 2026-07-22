@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MB Country Search Test — Alle ISO-3166-1 Codes</title>
+<style>
+  body{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;
+       padding:20px;font-size:13px}
+  h1{color:#00ff41;font-size:1.2em;margin-bottom:4px}
+  .sub{color:#00831e;font-size:.85em;margin-bottom:20px;line-height:1.5}
+  table{border-collapse:collapse;width:100%;max-width:900px}
+  th,td{padding:3px 10px;text-align:left;border-bottom:1px solid #00ff4122}
+  th{color:#00ff41;border-bottom:1px solid #00ff41;position:sticky;top:0;background:#0a0a0a}
+  .zero{color:#ff5555;font-weight:bold}
+  .low{color:#ffaa00}
+  .ok{color:#00ff41}
+  .pending{color:#666}
+  #status{margin-bottom:16px;font-size:.95em}
+  #summary{margin-bottom:16px;font-size:.95em;color:#0891b2;white-space:pre-line}
+  #progress{color:#00c42d}
+  button{background:#111;color:#00ff41;border:1px solid #00ff41;padding:8px 16px;
+         font-family:inherit;cursor:pointer;margin-bottom:16px}
+  button:hover{background:#00ff4122}
+  button:disabled{opacity:.4;cursor:default}
+  #tableWrap{max-height:70vh;overflow-y:auto;max-width:900px}
+</style>
+</head>
+<body>
+<h1>MusicBrainz Country Search Test — alle 249 ISO-3166-1 Codes</h1>
+<div class="sub">Prüft für JEDEN ISO-3166-1-Code (inkl. Territorien, Antarktis, Bouvetinsel & Co.): liefert <code>country:XX</code> bei MusicBrainz überhaupt Treffer, und wie viele Artists sind dort verzeichnet?<br>
+Dauer: ca. 249 × 1,3s ≈ 5-6 Minuten (MB Rate-Limit, sequenziell).</div>
+<button id="startBtn" onclick="runTest()">Test starten (alle 249 Codes)</button>
+<div id="status">Bereit.</div>
+<div id="summary"></div>
+<div id="tableWrap">
+<table>
+  <thead><tr><th>Code</th><th>Artist-Count</th><th>Status</th></tr></thead>
+  <tbody id="results"></tbody>
+</table>
+</div>
+
+<script>
+/* All 249 current ISO 3166-1 alpha-2 codes (incl. territories, uninhabited islands etc.) */
+const UN_COUNTRIES = [
+  'AD','AE','AF','AG','AI','AL','AM','AO','AQ','AR','AS','AT','AU','AW','AX','AZ',
+  'BA','BB','BD','BE','BF','BG','BH','BI','BJ','BL','BM','BN','BO','BQ','BR','BS',
+  'BT','BV','BW','BY','BZ','CA','CC','CD','CF','CG','CH','CI','CK','CL','CM','CN',
+  'CO','CR','CU','CV','CW','CX','CY','CZ','DE','DJ','DK','DM','DO','DZ','EC','EE',
+  'EG','EH','ER','ES','ET','FI','FJ','FK','FM','FO','FR','GA','GB','GD','GE','GF',
+  'GG','GH','GI','GL','GM','GN','GP','GQ','GR','GS','GT','GU','GW','GY','HK','HM',
+  'HN','HR','HT','HU','ID','IE','IL','IM','IN','IO','IQ','IR','IS','IT','JE','JM',
+  'JO','JP','KE','KG','KH','KI','KM','KN','KP','KR','KW','KY','KZ','LA','LB','LC',
+  'LI','LK','LR','LS','LT','LU','LV','LY','MA','MC','MD','ME','MF','MG','MH','MK',
+  'ML','MM','MN','MO','MP','MQ','MR','MS','MT','MU','MV','MW','MX','MY','MZ','NA',
+  'NC','NE','NF','NG','NI','NL','NO','NP','NR','NU','NZ','OM','PA','PE','PF','PG',
+  'PH','PK','PL','PM','PN','PR','PS','PT','PW','PY','QA','RE','RO','RS','RU','RW',
+  'SA','SB','SC','SD','SE','SG','SH','SI','SJ','SK','SL','SM','SN','SO','SR','SS',
+  'ST','SV','SX','SY','SZ','TC','TD','TF','TG','TH','TJ','TK','TL','TM','TN','TO',
+  'TR','TT','TV','TW','TZ','UA','UG','UM','US','UY','UZ','VA','VC','VE','VG','VI',
+  'VN','VU','WF','WS','YE','YT','ZA','ZM','ZW'
+];
+
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+let lastReq = 0;
+
+async function mbFetch(url){
+  const wait = 1300 - (Date.now()-lastReq);
+  if(wait>0) await sleep(wait);
+  lastReq = Date.now();
+  for(let attempt=0; attempt<=2; attempt++){
+    try{
+      const res = await fetch(url, {headers:{Accept:'application/json'}});
+      if((res.status===429||res.status>=500) && attempt<2){
+        await sleep(res.status===429?4000:1500*(attempt+1));
+        continue;
+      }
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return await res.json();
+    }catch(e){
+      if(attempt<2){ await sleep(1500*(attempt+1)); continue; }
+      throw e;
+    }
+  }
+}
+
+function row(code){
+  return `<tr id="row-${code}">
+    <td>${code}</td>
+    <td id="count-${code}" class="pending">…</td>
+    <td id="stat-${code}" class="pending">wartet</td>
+  </tr>`;
+}
+
+function renderInitial(){
+  const tbody = document.getElementById('results');
+  tbody.innerHTML = UN_COUNTRIES.map(c=>row(c)).join('');
+}
+
+async function testCountry(code){
+  const statEl = document.getElementById('stat-'+code);
+  const countEl = document.getElementById('count-'+code);
+  statEl.textContent = 'prüfe…';
+  statEl.className = 'pending';
+  try{
+    const data = await mbFetch(
+      `https://musicbrainz.org/ws/2/artist?query=country:${code}&limit=1&offset=0&fmt=json`
+    );
+    const count = data.count ?? 0;
+    countEl.textContent = count.toLocaleString('de-DE');
+    if(count===0){
+      statEl.textContent = 'KEINE TREFFER';
+      statEl.className = 'zero';
+    }else if(count<50){
+      statEl.textContent = 'sehr wenig';
+      statEl.className = 'low';
+    }else{
+      statEl.textContent = 'ok';
+      statEl.className = 'ok';
+    }
+    return count;
+  }catch(e){
+    countEl.textContent = '-';
+    statEl.textContent = 'FEHLER: '+e.message;
+    statEl.className = 'zero';
+    return -1;
+  }
+}
+
+async function runTest(){
+  document.getElementById('startBtn').disabled = true;
+  renderInitial();
+  const statusEl = document.getElementById('status');
+  const results = {};
+  for(let i=0; i<UN_COUNTRIES.length; i++){
+    statusEl.innerHTML = `<span id="progress">Teste ${i+1}/${UN_COUNTRIES.length}: ${UN_COUNTRIES[i]}</span>`;
+    results[UN_COUNTRIES[i]] = await testCountry(UN_COUNTRIES[i]);
+  }
+  statusEl.textContent = `Fertig — ${UN_COUNTRIES.length} Länder geprüft.`;
+
+  const zero = Object.entries(results).filter(([,c])=>c===0).map(([code])=>code);
+  const low = Object.entries(results).filter(([,c])=>c>0&&c<50).map(([code])=>code);
+  const errors = Object.entries(results).filter(([,c])=>c===-1).map(([code])=>code);
+  const ok = Object.entries(results).filter(([,c])=>c>=50).length;
+
+  document.getElementById('summary').textContent =
+`ZUSAMMENFASSUNG:
+Getestet: ${UN_COUNTRIES.length} ISO-3166-1-Codes
+Ausreichend Material (≥50 Artists): ${ok}
+Sehr wenig (1-49 Artists): ${low.length}${low.length?' → '+low.join(', '):''}
+KEINE Treffer (0 Artists): ${zero.length}${zero.length?' → '+zero.join(', '):''}
+Fehler bei Abfrage: ${errors.length}${errors.length?' → '+errors.join(', '):''}`;
+
+  document.getElementById('startBtn').disabled = false;
+}
+
+renderInitial();
+</script>
+</body>
+</html>

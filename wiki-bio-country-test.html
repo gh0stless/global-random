@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Wiki-Bio Country Resolution Test</title>
+<style>
+  body{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;
+       padding:20px;font-size:13px;max-width:1000px;margin:0 auto}
+  h1{color:#00ff41;font-size:1.2em;margin-bottom:4px}
+  .sub{color:#00831e;font-size:.85em;margin-bottom:20px;line-height:1.5}
+  input,button{background:#111;color:#00ff41;border:1px solid #00ff41;
+    padding:8px 12px;font-family:inherit;font-size:.9em}
+  input{width:340px}
+  button{cursor:pointer;margin-left:8px}
+  button:hover{background:#00ff4122}
+  button:disabled{opacity:.4;cursor:default}
+  table{border-collapse:collapse;width:100%;margin-top:20px}
+  th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #00ff4122;
+    vertical-align:top}
+  th{color:#00ff41;border-bottom:1px solid #00ff41}
+  .found{color:#00ff41;font-weight:bold}
+  .none{color:#ff5555}
+  .step{color:#666;font-size:.85em}
+  .bio{color:#888;font-size:.8em;max-width:340px}
+  #log{margin-top:20px;white-space:pre-wrap;font-size:.8em;color:#0891b2;
+    max-height:200px;overflow-y:auto;border-top:1px solid #00ff4122;padding-top:10px}
+</style>
+</head>
+<body>
+<h1>Wiki-Bio Country Resolution Test</h1>
+<div class="sub">
+Testet resolveCountryViaWikiBio(): MB-Artist-ID → url-rels → Wikipedia-Link → Bio-Text → Demonym-Erkennung.<br>
+Vorbelegte Beispiele sind Künstler, deren MB-Eintrag typischerweise kein direktes <code>country</code>-Feld hat.
+</div>
+
+<input id="mbidInput" placeholder="MB Artist-ID (MBID) oder Beispiel wählen unten" />
+<button onclick="testOne()">Einzeln testen</button>
+<button id="runAllBtn" onclick="runAll()">Alle Beispiele testen</button>
+
+<table>
+  <thead><tr><th>Künstler</th><th>MBID</th><th>MB country/area?</th><th>Wiki-Link</th><th>Bio-Ausschnitt</th><th>Erkanntes Land</th></tr></thead>
+  <tbody id="results"></tbody>
+</table>
+
+<div id="log"></div>
+
+<script>
+const DEMONYM_TO_COUNTRY={
+  american:'US',british:'GB',english:'GB',scottish:'GB',welsh:'GB',
+  german:'DE',deutscher:'DE',deutsche:'DE',
+  french:'FR',français:'FR',française:'FR',
+  japanese:'JP',korean:'KR',chinese:'CN',taiwanese:'TW',
+  italian:'IT',spanish:'ES',portuguese:'PT',brazilian:'BR',
+  dutch:'NL',belgian:'BE',swedish:'SE',norwegian:'NO',danish:'DK',
+  finnish:'FI',icelandic:'IS',polish:'PL',czech:'CZ',slovak:'SK',
+  hungarian:'HU',romanian:'RO',bulgarian:'BG',greek:'GR',turkish:'TR',
+  russian:'RU',ukrainian:'UA',israeli:'IL',iranian:'IR',
+  indian:'IN',pakistani:'PK',bangladeshi:'BD',thai:'TH',vietnamese:'VN',
+  indonesian:'ID',malaysian:'MY',filipino:'PH',
+  australian:'AU',canadian:'CA',mexican:'MX',argentine:'AR',argentinian:'AR',
+  colombian:'CO',chilean:'CL',peruvian:'PE',venezuelan:'VE',
+  nigerian:'NG',kenyan:'KE',ethiopian:'ET','south african':'ZA',
+  egyptian:'EG',moroccan:'MA',algerian:'DZ',
+  irish:'IE',croatian:'HR',serbian:'RS',slovenian:'SI',
+  lithuanian:'LT',latvian:'LV',estonian:'EE',georgian:'GE',
+  armenian:'AM',azerbaijani:'AZ',kazakh:'KZ',mongolian:'MN'
+};
+
+/* Two REAL, verified MBIDs (pulled from MusicBrainz search results / docs).
+   NOTE: both likely already have a direct country field set in MB, so they
+   mainly confirm the fetch/parse plumbing works — they probably won't
+   exercise the actual Wikipedia-fallback path (that only triggers when MB's
+   own country/area fields are empty). For a real fallback test, paste in an
+   MBID for an artist you saw land in the "??" unknown pool during a session. */
+const EXAMPLES=[
+  {name:'Björk (MB: Area=Iceland already set)', mbid:'87c5dedd-371d-4a53-9f7f-80522fb7f3cb'},
+  {name:'Queen (MB: official docs example)', mbid:'0383dadf-2a4e-4d10-a46a-e9e041da8eb3'},
+];
+
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let lastReq=0;
+function log(msg){
+  const el=document.getElementById('log');
+  el.textContent += msg + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+async function mbFetch(url){
+  const wait=1300-(Date.now()-lastReq);
+  if(wait>0) await sleep(wait);
+  lastReq=Date.now();
+  for(let attempt=0; attempt<=2; attempt++){
+    try{
+      const res=await fetch(url,{headers:{Accept:'application/json'}});
+      if((res.status===429||res.status>=500) && attempt<2){
+        await sleep(res.status===429?4000:1500*(attempt+1));
+        continue;
+      }
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return await res.json();
+    }catch(e){
+      if(attempt<2){ await sleep(1500*(attempt+1)); continue; }
+      throw e;
+    }
+  }
+}
+
+async function fetchWithRetry(url, maxRetries=2){
+  for(let attempt=0; attempt<=maxRetries; attempt++){
+    try{
+      const res=await fetch(url);
+      if(res.status>=500 && attempt<maxRetries){ await sleep(800*(attempt+1)); continue; }
+      return res;
+    }catch(e){
+      if(attempt<maxRetries){ await sleep(800*(attempt+1)); continue; }
+      throw e;
+    }
+  }
+}
+
+async function resolveCountryViaWikiBio(artistId, rowEls){
+  try{
+    log(`[${artistId}] fetching MB artist + url-rels…`);
+    const mb=await mbFetch(`https://musicbrainz.org/ws/2/artist/${artistId}?inc=url-rels&fmt=json`);
+    const ownCode = mb.country ?? mb['begin-area']?.['iso-3166-1-codes']?.[0] ?? mb.area?.['iso-3166-1-codes']?.[0] ?? null;
+    rowEls.own.textContent = ownCode ? ownCode+' (direct)' : 'none';
+    if(ownCode){ rowEls.result.textContent=ownCode; rowEls.result.className='found'; return; }
+
+    const wikiRel=(mb.relations??[]).find(r=>r.url?.resource?.includes('wikipedia.org/wiki/'));
+    if(!wikiRel){
+      rowEls.wiki.textContent='no wiki link';
+      rowEls.result.textContent='NONE'; rowEls.result.className='none';
+      return;
+    }
+    const m=wikiRel.url.resource.match(/https?:\/\/([a-z-]+)\.wikipedia\.org\/wiki\/(.+)/);
+    if(!m){ rowEls.result.textContent='NONE (bad url)'; rowEls.result.className='none'; return; }
+    const [,wLang,wTitleEnc]=m;
+    rowEls.wiki.textContent = `${wLang}.wikipedia.org/${decodeURIComponent(wTitleEnc)}`;
+    log(`  → wiki: ${wLang} / ${decodeURIComponent(wTitleEnc)}`);
+
+    const r=await fetchWithRetry(`https://${wLang}.wikipedia.org/api/rest_v1/page/summary/${wTitleEnc}`);
+    if(!r.ok){ rowEls.result.textContent='NONE (fetch fail)'; rowEls.result.className='none'; return; }
+    const d=await r.json();
+    const extract=d.extract||'';
+    rowEls.bio.textContent = extract.slice(0,150)+'…';
+    const text=extract.toLowerCase();
+    let found=null;
+    for(const [demonym,cc] of Object.entries(DEMONYM_TO_COUNTRY)){
+      if(text.includes(demonym)){ found={demonym,cc}; break; }
+    }
+    if(found){
+      rowEls.result.textContent = `${found.cc} (via "${found.demonym}")`;
+      rowEls.result.className='found';
+      log(`  → matched demonym "${found.demonym}" → ${found.cc}`);
+    }else{
+      rowEls.result.textContent='NONE (no demonym match)';
+      rowEls.result.className='none';
+      log(`  → no demonym found in bio`);
+    }
+  }catch(e){
+    rowEls.result.textContent='ERROR: '+e.message;
+    rowEls.result.className='none';
+    log(`  → ERROR: ${e.message}`);
+  }
+}
+
+function addRow(name, mbid){
+  const tbody=document.getElementById('results');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+    <td>${name}</td>
+    <td style="font-size:.75em;color:#666">${mbid}</td>
+    <td class="step" data-role="own">…</td>
+    <td class="step" data-role="wiki">…</td>
+    <td class="bio" data-role="bio"></td>
+    <td class="step" data-role="result">…</td>`;
+  tbody.appendChild(tr);
+  return {
+    own: tr.querySelector('[data-role="own"]'),
+    wiki: tr.querySelector('[data-role="wiki"]'),
+    bio: tr.querySelector('[data-role="bio"]'),
+    result: tr.querySelector('[data-role="result"]'),
+  };
+}
+
+async function testOne(){
+  const mbid=document.getElementById('mbidInput').value.trim();
+  if(!mbid) return;
+  const rowEls=addRow('(custom)', mbid);
+  await resolveCountryViaWikiBio(mbid, rowEls);
+}
+
+async function runAll(){
+  document.getElementById('runAllBtn').disabled=true;
+  document.getElementById('results').innerHTML='';
+  for(const ex of EXAMPLES){
+    const rowEls=addRow(ex.name, ex.mbid);
+    await resolveCountryViaWikiBio(ex.mbid, rowEls);
+  }
+  document.getElementById('runAllBtn').disabled=false;
+  log('--- fertig ---');
+}
+</script>
+</body>
+</html>
