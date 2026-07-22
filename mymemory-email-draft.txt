@@ -1,0 +1,22 @@
+An: mymemory@translated.net
+Betreff: Possible IP block / rate limit — request to lift
+
+Hi MyMemory team,
+
+I'm the developer of a small web app that uses the MyMemory Translation API
+client-side. During an intensive testing session I ran a large number of
+page reloads in a short time from my own IP address, and it looks like that
+IP is now being rate-limited or blocked — the app reports MyMemory as
+unreachable from this connection, even though it works fine from other
+networks.
+
+My IP address is: 89.186.135.154
+
+Could you please check whether this IP has been temporarily blocked, and
+lift it if so? I'll make sure normal production traffic stays well within a
+reasonable request rate going forward.
+
+Thanks for the great free service!
+
+Best regards,
+Andreas

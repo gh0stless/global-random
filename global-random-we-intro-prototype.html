@@ -4988,7 +4988,21 @@ function _playWEIntro(){
      OTHER half of what turned out to be the real remaining gap: the
      animation's own geometry was wasting several more seconds crawling
      through empty space before any text became visible. */
-  const _tickerShowTimer=setTimeout(_showLyricsTicker,20000);
+  /* Preview-mode listeners (no Spotify login, ~30s clips instead of the
+     full ~62s track — same dur<=31000 heuristic detectLoginStatus() uses
+     elsewhere) mean the 20s-delay-then-31s-crawl ticker timing, which was
+     calibrated against the full track, would show the ticker around the
+     same ~20s mark but then get abruptly cut off after only ~10s of its
+     crawl once the preview ends and finish() hides everything — a
+     half-finished scroll is worse than none, so skip the ticker entirely
+     once a short preview is confirmed rather than let it start into a
+     doomed crawl. Learned on the very first real update, same moment
+     tuneStopScheduled locks in below. */
+  let isPreviewIntro=false;
+  const _tickerShowTimer=setTimeout(()=>{
+    if(isPreviewIntro)return;
+    _showLyricsTicker();
+  },20000);
   let done=false, fadeStarted=false, tuneStopScheduled=false, _tuneStopTimer=null;
   function onUpdate(e){
     const dur=(e.data?.duration??e.duration??0);
@@ -5000,6 +5014,7 @@ function _playWEIntro(){
        otherwise eat unpredictably into that overlap). */
     if(!tuneStopScheduled){
       tuneStopScheduled=true;
+      if(dur<=31000) isPreviewIntro=true;
       _tuneStopTimer=setTimeout(stopSearchTune,3000);
     }
     const remaining=dur-pos;
