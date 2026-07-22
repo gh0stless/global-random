@@ -576,21 +576,28 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
    animation-delay would work identically here since it's a fixed click-
    relative offset either way, but keeping it in JS alongside the timer
    that actually needs to be cancellable on early SKIP INTRO avoids
-   splitting the same concern across two places). No delay here: the
-   animation starts the instant JS flips display:none→block, i.e.
-   exactly at the 20s mark, and runs for its own fixed 31s regardless of
-   the track's actual playback position. translateX(±100%) is relative
-   to the TRACK's OWN width, which is
-   always far wider than the container (it's one long line of lyrics) —
-   so ±100% reliably clears the container on both ends regardless of
-   actual text/viewport width, no JS measurement needed.
-   animation-fill-mode:forwards holds the fully-exited end state instead
-   of snapping back to center once the single iteration completes —
-   'backwards' isn't needed since there's no delay to hold through
-   anymore. */
+   splitting the same concern across two places).
+   --we-start-x/--we-end-x are set from JS (_showLyricsTicker()) as exact
+   PIXEL values, not left at a blind ±100%: translateX(100%) is relative
+   to the TRACK's OWN width, which is far wider than the container (one
+   long line of lyrics) — using it for the START position massively
+   overshoots how far right is actually needed (only one CONTAINER-width
+   of travel is needed to clear that edge), which silently added many
+   seconds of the 31s budget as dead crawl time with nothing visible yet
+   before the text ever entered frame. Measuring both widths once via
+   getBoundingClientRect() and animating exact pixel offsets removes that
+   entirely: start = just past the container's own right edge (zero
+   wasted travel), end = past the container's left edge by the track's
+   own full width plus a small buffer (guaranteed full clearance, same
+   as before, just no longer overshooting the START). Defaults on the
+   custom properties (100%/-100%) are only a fallback for the split
+   second before JS sets the real values. animation-fill-mode:forwards
+   holds the fully-exited end state instead of snapping back once the
+   single iteration completes. */
 #we-footer-scroll{display:none;overflow:hidden;white-space:nowrap;margin-top:6px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
-#we-footer-scroll-track{display:inline-block;font-family:'Courier New',monospace;color:#fff9;font-size:.72em;letter-spacing:.03em;animation:we-scroll-left 31s linear forwards}
-@keyframes we-scroll-left{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+#we-footer-scroll-track{display:inline-block;font-family:'Courier New',monospace;color:#fff9;font-size:.72em;letter-spacing:.03em;transform:translateX(var(--we-start-x,100%))}
+#we-footer-scroll-track.we-scroll-active{animation:we-scroll-left 31s linear forwards}
+@keyframes we-scroll-left{from{transform:translateX(var(--we-start-x,100%))}to{transform:translateX(var(--we-end-x,-100%))}}
 #give-inner{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
 #give-left{display:flex;flex-direction:column;align-items:center;gap:8px}
 #give-logo-link{text-decoration:none;display:flex;flex-direction:row;align-items:center;gap:8px}
@@ -4912,6 +4919,28 @@ function _weGenreCard(){
     .then(d=>{ if(d?.extract) $('genre-summary').textContent=d.extract.slice(0,400); });
 }
 
+/* Reveals the lyrics ticker, measuring exact pixel start/end offsets
+   instead of the blind translateX(±100%) an earlier version used (see
+   the CSS comment on #we-footer-scroll-track for the full story — ±100%
+   is relative to the TRACK's own width, wildly overshooting how far
+   right the START position actually needs to be, which silently burned
+   several seconds of the animation's 31s budget as dead crawl time
+   before any text was visible at all). display:block happens first so
+   getBoundingClientRect() has real layout to measure (a display:none
+   element reports 0×0); the .we-scroll-active class (which is what
+   actually carries the animation, see CSS) gets added only AFTER the
+   custom properties are set, so the animation's very first frame
+   already uses the correct values instead of a flash of the CSS
+   fallback (100%/-100%). */
+function _showLyricsTicker(){
+  const scroll=$('we-footer-scroll'), track=$('we-footer-scroll-track');
+  scroll.style.display='block';
+  const startX=scroll.getBoundingClientRect().width; // just past the container's own right edge — zero wasted crawl before text enters
+  const endX=-(track.scrollWidth+40); // past the container's left edge by the track's own full width, +40px buffer for certainty — same clearance guarantee ±100% gave, just no longer overshooting the START
+  track.style.setProperty('--we-start-x',startX+'px');
+  track.style.setProperty('--we-end-x',endX+'px');
+  track.classList.add('we-scroll-active');
+}
 
 function _playWEIntro(){
   _weIntroPlaying=true;
@@ -4944,8 +4973,11 @@ function _playWEIntro(){
      click). A predictable, click-anchored ~20s was preferred over exact
      lyric-content sync, so back to a plain click-relative timer —
      cleared in finish() so an early SKIP INTRO can't leave it to fire
-     later into whatever plays next. */
-  const _tickerShowTimer=setTimeout(()=>{ $('we-footer-scroll').style.display='block'; },20000);
+     later into whatever plays next. See _showLyricsTicker() for the
+     OTHER half of what turned out to be the real remaining gap: the
+     animation's own geometry was wasting several more seconds crawling
+     through empty space before any text became visible. */
+  const _tickerShowTimer=setTimeout(_showLyricsTicker,20000);
   let done=false, fadeStarted=false, tuneStopScheduled=false, _tuneStopTimer=null;
   function onUpdate(e){
     const dur=(e.data?.duration??e.duration??0);
@@ -4979,6 +5011,7 @@ function _playWEIntro(){
     $('btn').style.display='';
     $('skip-intro-btn').onclick=null;
     $('we-footer-scroll').style.display='none'; // lyrics ticker: gone with the track, whether it ended naturally or got skipped
+    $('we-footer-scroll-track').classList.remove('we-scroll-active'); // reset so a stray leftover animation frame can't flash if this ever got shown again
     _weIntroPlaying=false; // updateBtn() guard lifted — must happen before playReady(), which is what actually takes button ownership back over
     playReady();
   }
