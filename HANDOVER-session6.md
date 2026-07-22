@@ -103,11 +103,16 @@ Mobile Browser verlangen `EC.play()` synchron im Gesten-Tick — Desktop nutzt b
 ### 4.7 Werkbeschreibung: neuer Schlussabsatz
 Beide Sprachversionen (DE zuerst, EN gespiegelt) bekamen einen neuen letzten Absatz zur Welle:Erdball-Inspiration — Fakten zum 1928er-Hörspiel "Hallo! Hier Welle Erdball!" (Fritz Walter Bischoff, Schlesische Funkstunde Breslau) wurden per Wikipedia-Recherche verifiziert, nicht geraten.
 
+### 4.8 Prototyp vom Server genommen, robots.txt aufgeräumt, zweites S.A.M.-Sample
+- `global-random-we-intro-prototype.html` ist jetzt vom Live-Server gelöscht (per FTP `DELE`) — Archivierung bewusst nur über Git-Historie + lokalen Ordner, kein separater `archive/`-Unterordner.
+- `robots.txt` (Domain-Root) repariert: die alten Joomla-Pfadregeln zeigten seit der Migration ins Leere (`/administrator/` root → 404), während der echte, jetzt unter `/joomla/` liegende Admin-Login (`/joomla/administrator/` → 200) ungeschützt war. Neue Fassung nutzt korrekt `/joomla/`-präfixierte Disallow-Regeln; die wirkungslose `/joomla/robots.txt` (Crawler lesen nie eine robots.txt aus einem Unterordner) wurde gelöscht, `robots.txt.dist` als Joomla-Referenz belassen.
+- **Zweites S.A.M.-Sample fertig und eingebaut:** "Wir können wieder starten!" (`sam-we-can-start-final.mp3`/`.wav` + Rohaufnahme, alle im Repo). Läuft über `SAM_WE_CAN_START_B64`/`samWeCanStartBuffer`/`playSamWeCanStart()` — exakt nach dem Muster von `SAM_B64`/`samBuffer`/`playSam()`. Trigger-Punkt (explizit von Andreas so festgelegt, **nicht** die ursprünglich angenommene RESUMING-Stelle nach Spotify-Ausfall): einmalig beim **allerersten PLAY-Klick der Session**, in `handleBtn()` bei `count===0`, noch vor der Mobile/Desktop-Verzweigung — feuert also auf beiden Plattformen, unabhängig davon ob der Klick danach ins W:E-Intro oder direkt in normale Wiedergabe routet. Mit Playwright verifiziert: genau ein Aufruf beim ersten Klick, keiner bei weiteren Klicks, korrekte Dekodierung zu ~3,27s Mono-Audio — auch im Mobile-Viewport bestätigt.
+
 ---
 
 ## 5. Offene Punkte
 
-- **Neues S.A.M.-Sample "Wir können wieder starten!"** — Andreas muss es noch mit der C64-Hardware aufnehmen (wie bei den bisherigen Samples). Geplanter Einbauort: die `RESUMING`-Stelle in `detectSilentTrack()` nach einer Spotify-Ausfallpause (aktuell nur reiner Terminal-Text, kein Ton) — **noch nicht final bestätigt**, nochmal absprechen wenn die Datei da ist.
+- ~~Neues S.A.M.-Sample "Wir können wieder starten!"~~ — **erledigt**, siehe Abschnitt 4.8. Spielt beim allerersten PLAY-Klick der Session, nicht (wie ursprünglich angenommen) beim automatischen RESUMING nach Spotify-Ausfall.
 - **MyMemory-Rate-Limit-Anfrage** — Entwurf liegt in `mymemory-email-draft.txt` (Kontakt: `mymemory@translated.net`, IP `89.186.135.154`), **noch nicht verschickt** (kein Mail-Tool in dieser Session verfügbar — Gmail-MCP-Connector müsste erst von Andreas autorisiert werden). Andreas muss die Mail selbst senden oder den Connector freischalten.
 - **Alte offene Punkte aus dem Vorgänger-Dokument, weiterhin unverändert offen:** Lyrics-Karte (nur Link, keine echte Wiki-Fetch-Karte), Wiki/Wetter-Panel DE/EN-Umschaltung, zwei Playback-Modi (Info- vs. Discovery-Modus), AdGuard/DoH als möglicher MyMemory-Störfaktor (nie isoliert verifiziert).
 - **next-global-random (Nextcloud-Spinoff)** — eigenständiges Projekt, eigenes Handover (`HANDOVER-next-global-random.md`), diese Session nicht angefasst. Hat mittlerweile auch ein eigenes privates Repo: `github.com/gh0stless/next-global-random`.
