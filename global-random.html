@@ -4778,18 +4778,19 @@ function updateBtn(){
       if($('btn').style.display==='none'){
         stopSearchingAnimation();
         /* This reveal is where the ambient tune used to die — stopping it
-           HERE, at "ready", happens well before the user ever clicks PLAY,
-           let alone before the W:E intro starts. On desktop, before the
-           intro has played this session, leave it running straight
-           through this reveal instead — it's meant to carry through the
-           click and into the intro track itself, only fading 3s in once
-           that track is confirmed playing (see _playWEIntro()'s own
-           comment). Mobile is unaffected: that path never reaches
-           _playWEIntro(), so it keeps stopping the tune here exactly as
-           before (mobileFirstPlay() would otherwise be the only thing
-           left to stop it, but only once the user has already tapped —
-           a user-perceptible delay mobile doesn't need). */
-        if(isMobile||_weIntroDone) stopSearchTune();
+           HERE, at "ready", happens well before the user ever taps/clicks
+           PLAY, let alone before the W:E intro starts. Before the intro
+           has played this session (true for both mobile and desktop now
+           that _playWEIntro() runs on either — see handleBtn()), leave it
+           running straight through this reveal instead: it's meant to
+           carry through the click/tap and into the intro track itself,
+           only fading 3s in once that track is confirmed playing (see
+           _playWEIntro()'s own comment). count===0 only ever reaches this
+           branch once per session, before _weIntroDone can possibly be
+           true yet, so in practice this condition is really "not on a
+           later reveal after the intro already happened" — kept explicit
+           rather than assumed for that reason. */
+        if(_weIntroDone) stopSearchTune();
         term('READY.');
         term('PRESS PLAY ON SCREEN');
         playSam(); // S.A.M. sample, only on this regular reveal — not on the WE-intro fallback path
@@ -4839,11 +4840,11 @@ let _weIntroPlaying=false; // true only WHILE the intro track is actually playin
 
 /* Plays the W:E intro in the MAIN player (same #embed-wrapper the real
    random tracks use — cover art, title, everything visible exactly as
-   normal) before the very first track of the session. Called
-   unconditionally from handleBtn() on the first desktop click — no login
-   pre-check (an earlier version tried that via a separate early-probe on
-   the preview controllers; it turned out to corrupt the global
-   isLoggedIn/_previewConfirmed state other parts of the app rely on,
+   normal) before the very first track of the session, on both mobile and
+   desktop. Called unconditionally from handleBtn() on the first click/tap
+   — no login pre-check (an earlier version tried that via a separate
+   early-probe on the preview controllers; it turned out to corrupt the
+   global isLoggedIn/_previewConfirmed state other parts of the app rely on,
    breaking info cards and snow even for logged-in sessions, so it was
    removed entirely). Instead this just reacts to whatever duration
    Spotify actually reports for THIS track below — full (~62s, logged in)
@@ -5032,15 +5033,29 @@ function _playWEIntro(){
   }
   try{EC.addListener('playback_update',onUpdate);}catch(_){}
   $('skip-intro-btn').onclick=finish;
-  (async()=>{
-    async function tryPlay(ms=900){
-      try{EC.play();}
-      catch(e){ if(ms<4000){await sleep(ms);return tryPlay(ms*1.5);} }
-    }
+  if(isMobile){
+    /* Mobile: loadUri()+play() must happen synchronously in this call
+       chain, no sleep/retry dance — same gesture-tick constraint
+       mobileFirstPlay() below already works around (see its own
+       comment). handleBtn() got here via initAudio().then(...), the same
+       shape mobileFirstPlay() already reaches EC.play() through, so this
+       preserves whatever gesture-adjacent state that already-proven path
+       relies on. If play() throws here we're already past whatever
+       window we had, so retrying later wouldn't help — the 70s safety
+       net below covers that failure the same as any other. */
     EC.loadUri(WE_INTRO_URI);
-    await sleep(900);
-    await tryPlay();
-  })();
+    try{EC.play();}catch(_){}
+  }else{
+    (async()=>{
+      async function tryPlay(ms=900){
+        try{EC.play();}
+        catch(e){ if(ms<4000){await sleep(ms);return tryPlay(ms*1.5);} }
+      }
+      EC.loadUri(WE_INTRO_URI);
+      await sleep(900);
+      await tryPlay();
+    })();
+  }
   /* Safety net — if playback_update never reports a sane duration (track
      failed to load, network hiccup, whatever), don't strand the user on a
      dead intro screen forever with no way forward but SKIP. */
@@ -5054,15 +5069,29 @@ function handleBtn(){
   _userStopped=false; // any explicit PLAY/PLAY NEXT click cancels a prior STOP
   if(isMobile&&count===0){
     _gestureListening=false;
-    initAudio().then(()=>_startMobileMusic());
+    if(!_weIntroDone){
+      /* See _playWEIntro()'s own comment for the shared logic (banner,
+         ticker, tune crossfade, finish()) — mobile only changes HOW
+         playback actually gets kicked off inside that function (must be
+         synchronous within the gesture tick, same constraint
+         mobileFirstPlay() below already works around), not any of the
+         surrounding behavior. No login pre-check — same reasoning as the
+         desktop branch below: _playWEIntro()'s own onUpdate computes
+         its fade/cutover from whatever real duration Spotify reports,
+         logged-in or preview, nothing hardcoded. */
+      _weIntroDone=true;
+      initAudio().then(()=>_playWEIntro());
+    }else{
+      initAudio().then(()=>_startMobileMusic());
+    }
   }else if(!isMobile && count===0 && !_weIntroDone){
-    /* See _playWEIntro()'s own comment. Desktop-only, only the very first
-       PLAY of the session. No login pre-check — an earlier version tried
-       that via a separate early-probe on the preview controllers; it
-       turned out to corrupt the global isLoggedIn/_previewConfirmed state
-       other parts of the app rely on, breaking info cards and snow even
-       for logged-in sessions, so it was removed entirely. Instead this
-       just reacts to whatever duration Spotify actually reports for THIS
+    /* See _playWEIntro()'s own comment. Only the very first PLAY of the
+       session. No login pre-check — an earlier version tried that via a
+       separate early-probe on the preview controllers; it turned out to
+       corrupt the global isLoggedIn/_previewConfirmed state other parts
+       of the app rely on, breaking info cards and snow even for
+       logged-in sessions, so it was removed entirely. Instead this just
+       reacts to whatever duration Spotify actually reports for THIS
        session, logged-in (~62s) or preview-only (~30s) — _playWEIntro()'s
        own onUpdate already computes its fade/cutover from that real
        number, nothing hardcoded, so both cases already just work without
