@@ -5402,6 +5402,30 @@ function detectLoginStatus(){
 /* ── Play ── */
 function playReady(){
   if(!queue.length||!EC)return;
+  if(document.hidden){
+    /* Don't attempt to start NEW playback from a backgrounded tab. The
+       CURRENTLY playing track keeps going fine while hidden (confirmed:
+       mobile browsers generally let already-started media continue in
+       background tabs) — but STARTING a new one programmatically from a
+       hidden tab, with no fresh user gesture, is exactly the kind of
+       thing autoplay policies are built to block. Every playReady()
+       call site (natural end via waitForTrackEnd()'s next(), a manual
+       PLAY NEXT click — though that itself requires the tab to be
+       visible to begin with, detectSilentTrack()'s auto-retry, the
+       Spotify-outage resume) would otherwise each play their own dice
+       sound, fail silently, hit detectSilentTrack()'s 12s timeout, and
+       retry again — a repeating "dice sound, then nothing" loop, fully
+       inaudible to whoever isn't looking at their phone, with the info
+       cards never catching up to whatever's actually still playing.
+       Re-arming _trackEndAt to "already due" (rather than leaving
+       whatever cleanup() upstream may have just nulled it to) means the
+       SAME recovery check visibilitychange already runs on return
+       (Date.now()>=_trackEndAt) fires immediately and does the real
+       pick the moment the tab is genuinely visible/interactive again —
+       no separate mechanism needed. */
+    _trackEndAt=Date.now();
+    return;
+  }
   _showWEBanner(false); // search/intro phase is over once real playback starts
   clearTimeout(autoTimer);clearInterval(countdownInterval);
   /* Mark the main player empty RIGHT NOW, before anything else — mirrors
