@@ -47,14 +47,11 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" "https://crazy-midi.de/global-rand
 | Datei | Zweck |
 |---|---|
 | `global-random.html` | **Hauptdatei**, live als `index.html`. Enthält seit 22.07. auch die komplette W:E-Intro-Sequenz (siehe Abschnitt 6). |
-| `global-random-we-intro-prototype.html` | Privates Welle:Erdball-Kollaborations-Spinoff — enthält zusätzlich Splash-Logo (statt "LEAVE THE MATRIX") und Header-Logo (statt "GLOBAL RANDOM"-Text), die bewusst NICHT in die Hauptdatei übernommen wurden. **Nicht mehr live auf dem Server** (archiviert nur über Git + lokalen Ordner), lokal aber weiter synchron gehalten. |
 | `beschreibung.html` / `description.html` | Werkbeschreibungen DE/EN, komplett synchron (DE zuerst formuliert, EN gespiegelt) |
 | `mymemory-email-draft.txt` | Entwurf für Rate-Limit-Anfrage an MyMemory (`mymemory@translated.net`, IP `89.186.135.154`) — **noch nicht verschickt**, kein Mail-Tool in Claude-Code-Sessions autorisiert |
 | `sam-*.wav`/`.mp3` | S.A.M.-Sprachsample-Aufnahmen (roh + final), zwei Samples aktuell im Einsatz, siehe Abschnitt 5 |
 | `mb-country-test-all-iso.html`, `mb-offset-ceiling-test.html`, `wiki-bio-country-test.html`, `redirection.html` | Alte Test-Tools, Stand ggf. nicht mehr synchron mit aktuellem Hauptcode |
 | `fm-radio-tuning-sweeps.flac` | Audio-Rohmaterial |
-
-**Diff-Hygiene:** `diff global-random.html global-random-we-intro-prototype.html` sollte nur die bewusst unterschiedlichen Teile zeigen (Splash-Logo, Header-Logo, pillRed/pillBlue-Lokalisierung). Bei jeder Änderung an einer der beiden Dateien IMMER auch die andere prüfen/nachziehen.
 
 ---
 
@@ -98,7 +95,7 @@ Beide als MP3 base64-eingebettet (kleiner als WAV), Rohaufnahmen liegen zusätzl
 
 Auf dem ersten PLAY-Klick der Session (beide Plattformen) spielt zunächst der W:E-Song "Welle Erdball (C=64)" in der MAIN-Player-UI, mit eigenem Footer-Banner (Logo + "Hallo, hier spricht Welle:Erdball" + zeitgesteuertem Lyrics-Ticker), SKIP-INTRO-Button, und Radiotune-Crossfade-Übergang. Danach normale Discovery-Wiedergabe wie gewohnt.
 
-**Bewusst NICHT aus dem privaten Prototyp übernommen:** Splash-Screen-Logo (bleibt "LEAVE THE MATRIX") und Header-Logo oben links (bleibt "GLOBAL RANDOM"-Text).
+**Bewusst nicht mit übernommen** (aus dem inzwischen gelöschten privaten Prototyp, aus dem diese Sequenz stammt): Splash-Screen-Logo (bleibt "LEAVE THE MATRIX") und Header-Logo oben links (bleibt "GLOBAL RANDOM"-Text).
 
 **Mobile-Support:** Mobile Browser verlangen `EC.play()` synchron im Gesten-Tick — Desktop nutzt eine async Sleep/Retry-Kette, die das auf Mobile zerstören würde. `_playWEIntro()` verzweigt nur an der eigentlichen Play-Auslöse-Stelle (`if(isMobile){...synchron...}else{...async...}`), der Rest ist gemeinsamer Code. **Auf echtem Gerät getestet und bestätigt funktionierend.**
 
