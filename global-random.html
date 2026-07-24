@@ -4238,7 +4238,15 @@ function detectSilentTrack(itemId){
           if(remaining<=0){
             clearInterval(pauseInterval);
             term('RESUMING');
-            if(queue.length>0)playReady();
+            /* Same currentId re-check as waitForTrackEnd()'s next() and
+               this function's own onUpdate() above — 30s is long enough
+               for something else to have already moved playback on (a
+               manual PLAY NEXT click during the pause, or the
+               visibilitychange recovery firing its own playReady() if
+               the tab got backgrounded mid-pause). Without this, this
+               cooldown would fire ANOTHER playReady() on top of whatever
+               already happened, same duplicate-transition class of bug. */
+            if(currentId===itemId && queue.length>0)playReady();
           }else{
             setBuffer(`PAUSED ${remaining}s`);
           }
@@ -5285,6 +5293,20 @@ function waitForTrackEnd(itemId){
   let wasPlaying=false, fallbackTimer=null;
   function next(){
     cleanup();
+    /* Guards against a real race: on mobile, backgrounding the tab (e.g.
+       switching to the Spotify app to save a track) heavily throttles
+       this function's own fallbackTimer — sometimes past the point where
+       visibilitychange's own "_trackEndAt already passed while hidden"
+       recovery (see that handler) has already fired ITS OWN playReady()
+       for a newer track. That recovery path has no way to reach into
+       THIS closure to cancel fallbackTimer, so the old, throttled timer
+       can still go off afterwards. Without this check, next() would fire
+       a SECOND, overlapping playReady() call — two different tracks each
+       kick off their own loadMeta() chain, and whichever resolves last
+       wins the info cards, regardless of which one is actually audible.
+       onUpdate() below already guards the exact same way; this was
+       simply the one playReady()-triggering path that didn't match it. */
+    if(currentId!==itemId)return;
     if(queue.length>0)playReady();
     else{setBuffer('searching...');const p=setInterval(()=>{if(queue.length>0){clearInterval(p);playReady();}},300);}
   }
