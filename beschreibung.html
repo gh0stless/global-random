@@ -149,6 +149,16 @@ h3.section-title {
 }
 h3.section-title:first-of-type { margin-top: 0; }
 
+h4.sub-heading {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.98rem;
+    font-weight: 500;
+    color: var(--fg);
+    letter-spacing: 0.03em;
+    margin: 2.4rem 0 0.7rem;
+}
+h4.sub-heading:first-of-type { margin-top: 0; }
+
 p { margin: 0 0 1.5em; font-weight: 300; font-size: 1rem; }
 
 .work {
@@ -329,23 +339,68 @@ footer {
     <div><span class="label">Quellen</span> MusicBrainz · Spotify · MyMemory · Wikipedia/Wikidata · Open-Meteo</div>
 </div>
 
-<h3 class="section-title">Werkbeschreibung</h3>
+<h3 class="section-title">Bedienung</h3>
 
-<p>Streamingdienste hören mit. Sie merken sich, was wir mögen, und geben uns mehr davon. So entsteht eine Schleife: Wer viel hört, hört immer Ähnliches. <span class="work">GLOBAL RANDOM</span> durchbricht diese Schleife. Das Werk wählt Musik nicht nach Geschmack, sondern nach Zufall — echtem Zufall, gezogen aus Millionen Titeln, die MusicBrainz dokumentiert und die auf Spotify liegen. Die Verknüpfung zwischen einem MusicBrainz-Eintrag und dem passenden Spotify-Titel stammt dabei nicht von einem Algorithmus, sondern von echten, freiwilligen Editoren der MusicBrainz-Community — von Menschenhand kuratiert, nicht von einer Maschine erraten.</p>
+<ol class="manual">
+    <li>
+        <span class="m-title">Starten</span>
+        <span class="m-body">Auf die rote Pille klicken. Ein kurzes Radiotuning-Geräusch ertönt, während das Werk im Hintergrund die ersten drei vollständigen Kandidaten sucht. Steht <strong>READY.</strong> im Status-Kasten, auf <strong>PLAY</strong> klicken — dann geht's los.</span>
+    </li>
+    <li>
+        <span class="m-title">Am Desktop: Vollbildmodus empfohlen</span>
+        <span class="m-body"><strong>F11</strong> drücken für den Vollbildmodus des Browsers: Die vier Länder-Matrizen und der C64-Terminal-Bereich wirken erst mit etwas Platz.</span>
+    </li>
+    <li>
+        <span class="m-title">Für volle Titel statt 30-Sekunden-Ausschnitten: vorher bei Spotify einloggen</span>
+        <span class="m-body"><strong>open.spotify.com</strong> in einem separaten Tab öffnen und dort einloggen, bevor man <span class="work">GLOBAL RANDOM</span> startet — ein normaler Account genügt, Premium braucht es nicht, Werbung läuft keine. Der Browser schlägt beim Einloggen wiederholt vor, stattdessen die <strong>Spotify-App</strong> zu öffnen. Das ignorieren, im Browser einloggen. Ein grünes Häkchen im Fußbereich von <span class="work">GLOBAL RANDOM</span> bestätigt den Login; danach kommen keine Vorschau-Ausschnitte mehr, nur noch vollständige Titel. Der Spotify-Tab schließt sich danach problemlos — nur abmelden sollte man sich dort nicht, sonst verliert der eingebettete Player im Hintergrund seinen Zugriff.</span>
+    </li>
+    <li>
+        <span class="m-title">Gefallene Funde festhalten</span>
+        <span class="m-body">Im eingebetteten Spotify-Player oben rechts das "+"-Symbol anklicken — der Track landet direkt in deinem eigenen Spotify-Konto, in deinen Favoriten (Lieblingssongs), dauerhaft und nicht nur für diese Sitzung. Von dort aus erkundet man in Ruhe den Künstler, das Album, die nähere Umgebung im Katalog.</span>
+    </li>
+    <li>
+        <span class="m-title">Browser &amp; mögliche Störfaktoren</span>
+        <span class="m-body">Läuft in allen gängigen Browsern (Chrome, Firefox, Edge; Safari bislang nicht getestet). Ein aktives VPN kann gelegentlich die Verbindung zum eingebetteten Spotify-Player stören — bleibt der Ton ganz aus, hilft oft, das VPN kurz zu deaktivieren. Bleibt es trotz Login aus Schritt 3 bei 30-Sekunden-Ausschnitten: In Firefox blockiert der <strong>"Verbesserte Trackingschutz"</strong> (Total Cookie Protection) standardmäßig den Zugriff des eingebetteten Spotify-Players auf seine eigenen Login-Cookies aus dem separaten Tab — der Browser blockt sich hier aus Datenschutzgründen selbst aus. Fix: Schild-Symbol links in der Adressleiste anklicken und den Schutz für diese Seite deaktivieren.</span>
+    </li>
+    <li>
+        <span class="m-title">Auf dem Handy: nur 30-Sekunden-Vorschau möglich</span>
+        <span class="m-body">Der Spotify-Login-Trick aus Schritt 3 funktioniert auf dem Handy nicht — das ist eine Einschränkung von Spotify selbst, keine von <span class="work">GLOBAL RANDOM</span>. Mobil bleibt es bei kurzen 30-Sekunden-Ausschnitten; zusätzliche Elemente wie die Info-Karten oder der Schneefall der Titel in bis zu 87 Sprachen fehlen dort ebenfalls — das hält die Bedienung schlank.</span>
+    </li>
+</ol>
 
-<p>Der Titel sagt, worum es geht: Democracy of Sound. Demokratie heißt hier nicht Mehrheit, sondern Los. Jedes Land bekommt eine Chance — Kasachstan so gut wie die USA, Jamaika so gut wie Großbritannien. Ein eigener Mechanismus sorgt dafür, dass kein Land den Pool dominiert, selbst wenn die Datenbank selbst schief verteilt ist. Reiner Zufall wäre nicht fair — er würde die Schieflage der Daten nur kopieren. Also greift das Werk ein, leise, aber entschieden.</p>
+<h3 class="section-title">Konzept</h3>
+
+<h4 class="sub-heading">Ausgangspunkt</h4>
+
+<p>Streamingdienste hören mit. Sie merken sich, was wir mögen, und geben uns mehr davon. So entsteht eine Schleife: Wer viel hört, hört immer Ähnliches. <span class="work">GLOBAL RANDOM</span> durchbricht diese Schleife. Das Werk wählt Musik nicht nach Geschmack, sondern nach Zufall — echtem Zufall, gezogen aus Millionen Titeln, die MusicBrainz dokumentiert und Spotify führt. Einen MusicBrainz-Eintrag mit dem passenden Spotify-Titel verknüpft dabei kein Algorithmus, sondern echte, freiwillige Editoren der MusicBrainz-Community — von Menschenhand kuratiert, nicht von einer Maschine erraten.</p>
+
+<h4 class="sub-heading">Demokratie als Los</h4>
+
+<p>Der Titel sagt, worum es geht: Democracy of Sound. Demokratie heißt hier nicht Mehrheit, sondern Los. Jedes Land bekommt eine Chance — Kasachstan so gut wie die USA, Jamaika so gut wie Großbritannien. Ein eigener Mechanismus verhindert, dass ein Land den Pool dominiert, selbst wenn die Datenbank schief verteilt ist. Reiner Zufall wäre nicht fair — er würde die Schieflage der Daten nur kopieren. Also greift das Werk ein, leise, aber entschieden.</p>
 
 <blockquote>Demokratie heißt hier nicht Mehrheit, sondern Los.</blockquote>
 
+<h3 class="section-title">Historische Vorbilder des Loses</h3>
+
+<h4 class="sub-heading">Das Los in der Antike</h4>
+
 <p>Das ist keine neue Idee. Im antiken Athen wählte man die meisten Ämter nicht — man verloste sie. Ein Gerät aus Ton, das Kleroterion, entschied. Das war kein Nebenaspekt der Demokratie, das war ihr Kern. Wahl bevorzugt, wer bekannt ist, wer Geld hat, wer gut redet. Das Los behandelt jeden gleich. <span class="work">GLOBAL RANDOM</span> steht in dieser alten Tradition — nicht in der modernen, wo Demokratie Mehrheit heißt.</p>
+
+<h4 class="sub-heading">Eine universelle Idee</h4>
 
 <p>Das Los ist uralt, und es ist überall. Das chinesische I Ging deutet Schafgarbenstängel seit über zweitausend Jahren. Das Ifá-Orakel der Yoruba in Westafrika liest Palmnüsse, bis heute, millionenfach. Die Bibel lässt den zwölften Apostel auslosen. Menschen an ganz verschiedenen Orten der Welt kamen unabhängig voneinander auf dieselbe Idee: Wo der Mensch nicht entscheiden soll oder kann, soll das Los entscheiden. Die Idee ist nicht ausgestorben. Sie steckt in jeder Jury, die aus zufällig geladenen Bürgern besteht. Sie steckt in den Bürgerräten, die heute wieder Konjunktur haben — Irland, Frankreich, Ostbelgien. Auch das: eine Wiederbelebung des Loses gegen die reine Mehrheitsherrschaft.</p>
 
+<h4 class="sub-heading">Gesegneter Zufall, verbotenes Spiel</h4>
+
 <p>Nicht jeder Zufall galt gleich viel. Mittelalterliche Prediger unterschieden streng zwischen dem gesegneten Los und dem Teufelswürfel. Wer eine Frage ans Schicksal stellte, mit der Bibel, mit den Sortes Sanctorum, blieb meist unbehelligt. Wer um Geld würfelte, spielte, wie ein Prediger es nannte, mit "Decius" statt mit "Deus" — ein Wortspiel, das den Würfeltisch zum Altar für den Teufel erklärte. Der Unterschied lag nie im Mechanismus. Zufall bleibt Zufall. Er lag in der Absicht: sucht man Führung, oder will man gewinnen? <span class="work">GLOBAL RANDOM</span> verspricht keinen Gewinn. Es fällt klar auf die alte, geduldete Seite dieser Unterscheidung.</p>
 
-<hr class="divider">
+<h3 class="section-title">Die schiefe Datenbank</h3>
+
+<h4 class="sub-heading">Warum die Daten schief sind</h4>
 
 <p>Warum ist die Datenbank überhaupt schief? Nicht nur, weil reiche Länder mehr Musikindustrie haben. Musik verbreitet sich verschieden, je nachdem, wo man lebt. Wer in Berlin oder New York Musik macht, lädt fast automatisch bei einem Streaming-Dienst hoch. Wer in vielen anderen Teilen der Welt Musik macht, tut das oft anders: auf Kassette, über Messenger-Apps, im Lokalradio, live beim Fest — nie auf einer Plattform, nie katalogisiert. <span class="work">GLOBAL RANDOM</span> zieht nur aus dem Teil der Welt, der den Sprung auf Spotify schon geschafft hat. Das ist eine Grenze, keine Lüge. Das Werk zeigt nicht alle Musik der Welt. Es zeigt, was die digitale Welt von ihr eingefangen hat.</p>
+
+<h4 class="sub-heading">Zahlen</h4>
 
 <p>Zahlen machen das greifbarer als jede Beschreibung:</p>
 
@@ -370,84 +425,97 @@ footer {
 
 <p>Der Zufall gleicht das nicht vollständig aus — er zeigt es nur ehrlicher, als ein Algorithmus es je täte.</p>
 
+<h3 class="section-title">Ästhetik &amp; künstlerische Bezüge</h3>
+
+<h4 class="sub-heading">Bildschirm &amp; Sprache</h4>
+
 <p>Man sieht das auf dem Bildschirm: Titel fallen wie Schnee, jeder in bis zu 87 Sprachen übersetzt, in Echtzeit. Die Wörter kommen, überlagern sich, verschwinden wieder. Man kann sie nicht alle lesen. Das ist Absicht. Kultur ist gleichzeitig, an vielen Orten, in vielen Sprachen — kein Mensch fasst das auf einmal.</p>
 
-<p>Die Optik zitiert alte Computer: grüne Schrift, Terminal-Zeilen, ein Font wie vom C64. Das ist kein Zufall. Schon in den sechziger Jahren bauten Künstler wie Cage oder Xenakis den Zufall in ihre Musik ein — mit Münzwürfen, mit dem I Ging, mit Wahrscheinlichkeitsrechnung. Die frühen Computer trieben diese Idee weiter.</p>
+<h4 class="sub-heading">Zufall in der Kunst</h4>
+
+<p>Die Optik zitiert alte Computer: grüne Schrift, Terminal-Zeilen, ein Font wie vom C64. Kein Zufall — schon in den sechziger Jahren bauten Künstler wie Cage oder Xenakis den Zufall in ihre Musik ein: mit Münzwürfen, mit dem I Ging, mit Wahrscheinlichkeitsrechnung. Die frühen Computer trieben diese Idee weiter.</p>
+
+<h4 class="sub-heading">Dave: die Karten der Einstürzenden Neubauten</h4>
 
 <p>Auch die Einstürzenden Neubauten gehören in diese Linie. Ihr System heißt Dave — benannt nach der Stimme des ersten Navigationsgeräts, das Blixa Bargeld je besaß. Eine Kiste mit 600 Karten, jede mit einer Anweisung: ein Instrument, eine Spielweise, manchmal nur ein Wort wie "Zufall". Vor dem Spiel zieht jeder ein paar Karten und folgt, was draufsteht. Offen für Interpretation, aber vom Los bestimmt — nicht der Musiker allein entscheidet, was als Nächstes kommt. <span class="work">GLOBAL RANDOM</span> stellt sich in diese Reihe — und zugleich gegen die Plattformen von heute, die genau das Gegenteil tun: alles vorhersagen, nichts dem Zufall überlassen.</p>
 
-<hr class="divider">
+<h3 class="section-title">Orakel &amp; Deutung</h3>
+
+<h4 class="sub-heading">Wie ein Tarot</h4>
 
 <p>Wer will, kann <span class="work">GLOBAL RANDOM</span> auch wie ein Tarot benutzen. Karten legen, Solitär spielen, das I Ging befragen — Menschen haben Zufallsverfahren immer schon genutzt, um eine Frage ans Schicksal zu stellen. Bei diesem Werk kommt die Antwort nicht als Karte, sondern als Songtitel. Manchmal banal. Manchmal, zufällig, seltsam genau.</p>
 
+<h4 class="sub-heading">Wie im Radio</h4>
+
 <p>Das kennt jeder vom Radio: ein Song läuft, und er passt genau zur Situation, in der man gerade steckt. Meist steckt dahinter nur ein Redakteur, der irgendeinen Geschmack hatte, und ein Zufall, der die eigene Lage mit fremder Auswahl kollidieren ließ. Bei <span class="work">GLOBAL RANDOM</span> fehlt sogar der Redakteur. Niemand hat den Titel für einen ausgesucht. Was bleibt, ist der Zufall allein — ohne fremde Absicht, die man ihm nachträglich unterstellen könnte.</p>
+
+<h4 class="sub-heading">Drei verdeckte Karten</h4>
+
+<p>Die drei Kandidaten in der Warteschlange sind wie drei verdeckte Karten. Aufgedeckt wird immer nur eine. Der Würfel entscheidet welche — nicht Minuten oder Stunden im Voraus, sondern im letzten Moment, kurz bevor der neue Track beginnt. Kaum liegt sie offen, rutscht schon die nächste verdeckte Karte nach. Keine Antwort wartet fertig in der Schublade. Sie entsteht erst in dem Moment, in dem die Frage gestellt wird. Der Zufall geschieht also wirklich live, in Echtzeit — genau das macht das System als Orakel interessant. Wie beim Tarot, nur dass hier niemand die Karte vorher kennt, auch das Werk selbst nicht.</p>
+
+<h4 class="sub-heading">Die Antwort: ein Songtitel</h4>
+
+<p>Was am Ende aufgedeckt wird, ist kein Bild und keine Karte, sondern ein Songtitel. Das passt zum Orakel-Gedanken: Songtitel sind selten neutral. Sie sind oft schon für sich genommen aussagekräftig, manchmal regelrecht bedeutungsschwer — kurze, verdichtete Zeilen, gemacht, um zu treffen. Genau das macht den Zufallstreffer charmant: Er ist meist wirklich schon eine Aussage, die als Botschaft interpretiert werden kann.</p>
+
+<h4 class="sub-heading">Eine Botschaft?</h4>
+
+<p>Manche werden im zufällig gezogenen Titel eine Botschaft erkennen. Psychologen nennen das eine Beziehungsidee: Die Welt scheint plötzlich zu einem zu sprechen. In milder Form kennt das fast jeder — beim Radio, beim Blick auf die Uhr, beim zufällig aufgeschlagenen Buch. Das ist Teil der Einladung des Werks — und zugleich ein sehr menschliches, sehr altes Muster, dem Zufall Bedeutung zu geben. Wer sich davon stärker berührt fühlt, als ihm guttut, darf das Werk jederzeit einfach schließen.</p>
+
+<h3 class="section-title">Spenden</h3>
 
 <p>Wer zuhört, kann auch spenden. Ein Klick führt zu GiveDirectly — Geld geht direkt an Menschen in extremer Armut, ohne Umweg. Das ist kein Zusatz, sondern Teil der Idee. Der Zufall zeigt: Musik kommt von überall gleich. Die Welt selbst ist nicht so gerecht. Wer das hört, kann etwas dagegen tun.</p>
 
 <p><a class="donate-cta" href="https://www.givedirectly.org/donate/" target="_blank" rel="noopener">→ GiveDirectly.org</a></p>
 
-<p>Wer will, macht aus <span class="work">GLOBAL RANDOM</span> auch ein echtes Werkzeug zur Horizonterweiterung. Ein Fund, der hängen bleibt, lässt sich mit einem Klick auf das "+"-Symbol im eingebetteten Spotify-Player dauerhaft im eigenen Spotify-Konto speichern, in den eigenen Favoriten, nicht nur für den Moment. Von dort aus lässt sich weiterverfolgen: der Künstler, das Album, die Nachbarschaft im Katalog. Der Zufall liefert nur den ersten Kontakt. Was danach kommt, liegt wieder bei einem selbst.</p>
+<h3 class="section-title">Zufall, Vorsehung, freier Wille</h3>
 
-<h3 class="section-title">Bedienung</h3>
+<h4 class="sub-heading">Der freie Wille</h4>
 
-<ol class="manual">
-    <li>
-        <span class="m-title">Starten</span>
-        <span class="m-body">Auf die rote Pille klicken. Ein kurzes Radiotuning-Geräusch ist zu hören, während das Werk im Hintergrund die ersten drei vollständigen Kandidaten sucht. Sobald <strong>READY.</strong> im Status-Kasten steht, auf <strong>PLAY</strong> klicken — dann geht's los.</span>
-    </li>
-    <li>
-        <span class="m-title">Am Desktop: Vollbildmodus empfohlen</span>
-        <span class="m-body"><strong>F11</strong> drücken für den Vollbildmodus des Browsers — die vier Länder-Matrizen und der C64-Terminal-Bereich brauchen etwas Platz, um ihre volle Wirkung zu entfalten.</span>
-    </li>
-    <li>
-        <span class="m-title">Für volle Titel statt 30-Sekunden-Ausschnitten: vorher bei Spotify einloggen</span>
-        <span class="m-body"><strong>open.spotify.com</strong> in einem separaten Tab öffnen und dort einloggen, bevor man <span class="work">GLOBAL RANDOM</span> startet — ein normaler Account genügt, Premium ist nicht nötig, und es läuft keine Werbung. Beim Einloggen schlägt der Browser wiederholt vor, stattdessen die <strong>Spotify-App</strong> zu öffnen — das konsequent ignorieren und im Browser einloggen. Ein grünes Häkchen im Fußbereich von <span class="work">GLOBAL RANDOM</span> bestätigt den erfolgreichen Login; danach sollten keine Vorschau-Ausschnitte mehr auftauchen, nur noch vollständige Titel. Der Spotify-Tab selbst kann danach wieder geschlossen werden — nur abmelden sollte man sich dort nicht, sonst verliert der eingebettete Player im Hintergrund seinen Zugriff.</span>
-    </li>
-    <li>
-        <span class="m-title">Gefallene Funde festhalten</span>
-        <span class="m-body">Im eingebetteten Spotify-Player oben rechts das "+"-Symbol anklicken — der Track landet direkt in deinem eigenen Spotify-Konto, in deinen Favoriten (Lieblingssongs), dauerhaft und nicht nur für diese Sitzung. Von dort aus lässt sich der Künstler, das Album oder die nähere Umgebung im Katalog in aller Ruhe weiter erkunden.</span>
-    </li>
-    <li>
-        <span class="m-title">Browser &amp; mögliche Störfaktoren</span>
-        <span class="m-body">Läuft in allen gängigen Browsern (Chrome, Firefox, Edge; Safari bislang nicht getestet). Ein aktives VPN kann gelegentlich die Verbindung zum eingebetteten Spotify-Player stören — bleibt der Ton ganz aus, hilft oft, das VPN kurz zu deaktivieren. Bleibt es trotz Login aus Schritt 3 bei 30-Sekunden-Ausschnitten: In Firefox blockiert der <strong>"Verbesserte Trackingschutz"</strong> (Total Cookie Protection) standardmäßig, dass der eingebettete Spotify-Player auf seine eigenen Login-Cookies aus dem separaten Tab zugreifen darf — Browser blockt hier quasi sich selbst aus Datenschutzgründen aus. Fix: Schild-Symbol links in der Adressleiste anklicken und den Schutz für diese Seite deaktivieren.</span>
-    </li>
-    <li>
-        <span class="m-title">Auf dem Handy: nur 30-Sekunden-Vorschau möglich</span>
-        <span class="m-body">Der Spotify-Login-Trick aus Schritt 3 funktioniert auf dem Handy nicht — das ist eine Einschränkung von Spotify selbst, keine von <span class="work">GLOBAL RANDOM</span>. Mobil bleibt es bei kurzen 30-Sekunden-Ausschnitten; zusätzliche Elemente wie die Info-Karten oder der Schneefall der Titel in bis zu 87 Sprachen sind dort ebenfalls deaktiviert, um die Bedienung schlank zu halten.</span>
-    </li>
-</ol>
+<p>Für den Künstler bedeutet der Zufall noch etwas Zweites, Persönliches — auch wenn er bewusst offenlässt, wer oder was dahintersteckt. Eine mögliche Lesart: Gott gab dem Menschen den freien Willen. Wer freien Willen gibt, greift nicht mehr direkt ein — sonst wäre der Wille nicht frei. Wer oder was auch immer dahintersteht, kann die Welt also nicht steuern, ohne diese Freiheit zu brechen — wirkt es trotzdem, dann eher durch den Zufall. Jedes Los, jeder Wurf, jede zufällige Fügung — ein möglicher Weg, auf dem etwas handeln kann, ohne den menschlichen Willen anzutasten. Ob das Gott ist, ein Gegenspieler, oder etwas, das sich jeder Benennung entzieht: <span class="work">GLOBAL RANDOM</span> macht den Gedanken hörbar, ohne ihn zu behaupten. Der Zufall, der hier über die Musik entscheidet, ist mehr als ein technisches Prinzip — er lässt offen, wessen Hand, wenn überhaupt eine, im Spiel ist.</p>
 
-<h3 class="section-title">Hintergrund</h3>
+<h4 class="sub-heading">Physik und Vorsehung</h4>
 
-<p>Der Zufall trägt für den Künstler noch einen zweiten Sinn, einen persönlichen — auch wenn er bewusst offenlässt, wer oder was genau dahintersteckt. Eine mögliche Lesart: Gott gab dem Menschen den freien Willen. Wer freien Willen gibt, greift nicht mehr direkt ein — sonst wäre der Wille nicht frei. Wer oder was auch immer dahintersteht, kann die Welt also nicht steuern, ohne diese Freiheit zu brechen — wirkt es trotzdem, dann eher durch den Zufall. Jedes Los, jeder Wurf, jede zufällige Fügung — ein möglicher Weg, auf dem etwas handeln kann, ohne den menschlichen Willen anzutasten. Ob das Gott ist, ein Gegenspieler, oder etwas, das sich jeder Benennung entzieht: <span class="work">GLOBAL RANDOM</span> macht den Gedanken hörbar, ohne ihn zu behaupten. Der Zufall, der hier über die Musik entscheidet, ist mehr als ein technisches Prinzip — er lässt offen, wessen Hand, wenn überhaupt eine, im Spiel ist.</p>
+<p>Dieser Gedanke steht nicht für sich allein. Der Physiker William Pollard — zugleich episkopalischer Priester — arbeitete ihn 1958 in seinem Buch "Chance and Providence" aus: Weil die Quantenmechanik echten, nicht nur scheinbaren Zufall kennt, gibt es im Universum tatsächlich offene Stellen, an denen etwas wirken kann, ohne Naturgesetze zu brechen oder fremden Willen zu überschreiben. Das Forschungsfeld dazu heißt heute "Divine Action"; Physiker wie Robert John Russell oder John Polkinghorne denken es bis heute weiter.</p>
 
-<p>Dieser Gedanke steht nicht für sich allein. Der Physiker William Pollard — zugleich episkopalischer Priester — hat ihn 1958 in seinem Buch "Chance and Providence" ausgearbeitet: Weil die Quantenmechanik echten, nicht nur scheinbaren Zufall kennt, gibt es im Universum tatsächlich offene Stellen, an denen sich wirken ließe, ohne Naturgesetze zu brechen oder fremden Willen zu überschreiben. Das Forschungsfeld dazu heißt heute "Divine Action" und wird von Physikern wie Robert John Russell oder John Polkinghorne bis heute weitergedacht.</p>
+<h4 class="sub-heading">Thomas von Aquin</h4>
 
 <p>Noch älter ist die Idee bei Thomas von Aquin im 13. Jahrhundert: Was aus menschlicher Sicht Zufall ist, schließt göttliche Vorsehung nicht aus — im Gegenteil. Gerade die Zufälligkeit aus der eigenen, begrenzten Perspektive kann genau der Kanal sein, durch den sich Vorsehung entfaltet, ohne je als Eingriff erkennbar zu werden.</p>
+
+<h4 class="sub-heading">Einstein</h4>
 
 <p>Einstein sagte: Gott würfelt nicht. Die Physik gab ihm unrecht — der Würfel ist echt, kein verborgener Mechanismus dahinter. Aber vielleicht hatte Einstein trotzdem recht, nur anders, als er meinte. Vielleicht würfelt Gott wirklich nicht. Vielleicht nutzt er den echten Würfel nur als Tarnung.</p>
 
 <blockquote>Der Zufall bleibt Zufall. Nur der Sinn dahinter bleibt verborgen.</blockquote>
 
-<p>Auch für Computer ist echter Zufall ein Problem, eines der schwierigsten der Informatik überhaupt. Ein Computer ist eine deterministische Maschine: gleiche Eingabe, immer gleiche Ausgabe. Reinen Zufall gibt es darin eigentlich nicht. Was Programme wie dieses nutzen, heißt Pseudozufall — ein Algorithmus, der zufällig aussieht, aber, kennt man den Startwert, vollständig berechenbar bleibt. Für ein Kunstwerk reicht das. Für eine Verschlüsselung nicht — dort braucht es echte Entropie, aus Rauschen, aus radioaktivem Zerfall, aus Lavalampen vor einer Kamera. <span class="work">GLOBAL RANDOM</span> nutzt die einfache Zufallsfunktion des Browsers. Ehrlich genug für Kunst, zu schwach für ein Tresorschloss.</p>
+<h3 class="section-title">Technik</h3>
 
-<p>Wer's genauer wissen will: Unter der Haube laufen zwei Prozesse nebeneinander her. Im Hintergrund durchkämmt das Werk fortlaufend einen zufälligen Ausschnitt aus MusicBrainz' Datenbank — nicht der Reihe nach, sondern mit zufälligem Offset, damit jede Ecke des Katalogs eine echte Chance hat. Daraus füllt sich, nach demselben Fairness-Prinzip gewichtet, ein Pool pro Land mit maximal sechs wartenden Kandidaten; ältere Kandidaten rutschen wieder raus, der Pool bleibt immer frisch.</p>
+<h4 class="sub-heading">Echter Zufall ist schwer</h4>
 
-<p>Die Wiedergabe selbst läuft in ihrem eigenen Takt, unabhängig davon: Ein Würfelwurf entscheidet, welcher von drei Kandidaten in der Warteschlange jetzt gespielt wird. Kurz nachdem die Wiedergabe bestätigt angelaufen ist — vier bis acht Sekunden später —, würfelt das Werk den frei gewordenen Platz in der Warteschlange gleich wieder nach: welches Land, welcher Kandidat daraus. Erst wenn der Titel zu Ende ist, wird erneut gewürfelt, wer von den (wieder vollen) drei Kandidaten als Nächstes läuft.</p>
+<p>Auch für Computer ist echter Zufall ein Problem, eines der schwierigsten der Informatik überhaupt. Ein Computer ist eine deterministische Maschine: gleiche Eingabe, immer gleiche Ausgabe. Reinen Zufall gibt es darin nicht. Was Programme wie dieses nutzen, heißt Pseudozufall — ein Algorithmus, der zufällig aussieht, aber, kennt man den Startwert, vollständig berechenbar bleibt. Für ein Kunstwerk reicht das. Für eine Verschlüsselung nicht — dort braucht es echte Entropie, aus Rauschen, aus radioaktivem Zerfall, aus Lavalampen vor einer Kamera. <span class="work">GLOBAL RANDOM</span> nutzt die einfache Zufallsfunktion des Browsers. Ehrlich genug für Kunst, zu schwach für ein Tresorschloss.</p>
 
-<p>Vier unabhängige Zufallsebenen also — welcher Ausschnitt der Datenbank überhaupt durchsucht wird, welches Land beim Nachrücken den freien Platz bekommt, welcher Kandidat aus dessen Warteliste dafür gezogen wird, und welcher der wartenden Kandidaten am Ende tatsächlich gespielt wird — nicht nur eine.</p>
+<h4 class="sub-heading">Wie das Werk sucht</h4>
 
-<p>Und noch ein Detail, das die Sache nah am Orakel hält, nicht an der Playlist: Man kann sich die drei Kandidaten in der Warteschlange wie drei verdeckte Karten vorstellen, die nebeneinanderliegen. Aufgedeckt wird immer nur eine — welche, entscheidet der Würfel nicht Minuten oder Stunden im Voraus, sondern buchstäblich im letzten Moment, unmittelbar bevor der neue Track zu hören ist. Kaum liegt sie offen, rutscht schon eine neue verdeckte Karte nach. Keine Antwort liegt vorbereitet in der Schublade. Sie entsteht erst, wenn die Frage gerade gestellt wird — wie beim Tarot von vorhin, nur dass hier niemand die Karte vorab kennt, nicht mal das Werk selbst.</p>
+<p>Im Hintergrund durchsucht das Werk fortlaufend zufällige Abschnitte der MusicBrainz-Datenbank — nicht von vorn bis hinten, sondern kreuz und quer, damit jede Ecke des riesigen Katalogs eine echte Chance bekommt. Aus den Treffern füllt sich, Land für Land, ein Wartepool: bis zu sechs Kandidaten pro Land. Ältere Kandidaten rutschen wieder raus, der Pool bleibt frisch.</p>
 
-<p>Ein Nebeneffekt dieses Aufbaus: Gleich zu Beginn einer Sitzung ist die Auswahl oft von wenigen Ländern geprägt — einfach weil erst wenige MusicBrainz-Ausschnitte durchgekämmt wurden. Wer das Werk über Stunden laufen lässt, merkt: die selteneren Länder-Pools füllen sich nach und nach mit, und die Musik wird zunehmend vielfältiger. Geduld wird hier wörtlich belohnt.</p>
+<h4 class="sub-heading">Drei Kandidaten, ein Los</h4>
 
-<p>Und noch etwas: <span class="work">GLOBAL RANDOM</span> ist eine einzige Datei — HTML, CSS und JavaScript in einem, ohne eigenes Backend, ohne Datenbank, ohne Account-System. Kein Server im Sinne von "läuft irgendwo für dich" — nur ein simples <code>https://</code>-Webspace, auf das man die Datei legt, muss es sein, damit der Spotify-Player im Browser überhaupt mitspielt (lokal per Doppelklick geöffnet, verweigert Spotify aus Sicherheitsgründen die volle Wiedergabe). Wer die Datei hat, kann sie weitergeben, kopieren, auf jeden x-beliebigen Webspace hochladen. Das ist die politischste Entscheidung der ganzen Arbeit — sie verweigert sich nicht nur dem Algorithmus, sondern auch der Abhängigkeit von einer bestimmten Plattform, die dieses Werk zeigen könnte.</p>
+<p>Zu Beginn zieht das Werk drei Kandidaten aus den Länderpools in die Warteschlange — jeden aus einem zufällig gewählten Land. Einer der drei wird gespielt, der Würfel entscheidet. Sobald die Wiedergabe läuft, besetzt das Werk den frei gewordenen Platz gleich neu: Wieder entscheidet der Zufall, aus welchem Land der nächste Kandidat kommt und welcher Kandidat aus dessen Pool es wird. So bleiben immer drei Kandidaten in der Warteschlange. Ist ein Titel zu Ende, entscheidet erneut das Los, wer von den dreien jetzt an der Reihe ist.</p>
+
+<h4 class="sub-heading">Geduld wird belohnt</h4>
+
+<p>Ein Nebeneffekt dieses Aufbaus: Gleich zu Beginn einer Sitzung prägen oft wenige Länder die Auswahl — einfach weil das Werk erst wenige MusicBrainz-Ausschnitte durchgekämmt hat. Wer das Werk über Stunden laufen lässt, merkt: Die selteneren Länder-Pools füllen sich nach und nach, die Musik wird zunehmend vielfältiger. Geduld zahlt sich hier wörtlich aus.</p>
+
+<h3 class="section-title">Eine Datei, kein Server</h3>
+
+<p>Und noch etwas: <span class="work">GLOBAL RANDOM</span> ist eine einzige Datei — HTML, CSS und JavaScript in einem, ohne eigenes Backend, ohne Datenbank, ohne Account-System. Kein Server im Sinne von "läuft irgendwo für dich" — nur simples <code>https://</code>-Webspace braucht es, sonst spielt der Spotify-Player im Browser nicht mit (öffnet man die Datei lokal per Doppelklick, verweigert Spotify aus Sicherheitsgründen die volle Wiedergabe). Wer die Datei hat, kann sie weitergeben, kopieren, auf jeden x-beliebigen Webspace hochladen. Das ist die politischste Entscheidung der ganzen Arbeit — sie verweigert sich nicht nur dem Algorithmus, sondern auch der Abhängigkeit von einer bestimmten Plattform, die dieses Werk zeigen könnte.</p>
+
+<h3 class="section-title">Der Kampf hat begonnen...</h3>
 
 <p>Ein kleiner, nicht eingeplanter Treppenwitz zum Schluss: Wer <span class="work">GLOBAL RANDOM</span> über den eigenen Spotify-Account laufen lässt, füttert nebenbei live Spotifys eigenen Empfehlungsalgorithmus — mit einem Hörprofil, das sich schlicht nicht modellieren lässt. Ein Track aus Israel, dann Puerto Rico, dann eine Sinfonie von Strauss, dann ASMR, dann Nordkorea. Kein Machine-Learning-Modell der Welt findet darin ein Muster für „was schlage ich als Nächstes vor". Der Untertitel des Werks, „Der Kampf gegen den Algorithmus hat begonnen", war ursprünglich als Haltung gemeint, nicht als technische Ansage — er ist trotzdem wahr geworden, nur eine Ebene tiefer als geplant: Man sabotiert live genau das System, gegen das die Installation konzeptionell antritt. Nicht durch Verweigerung. Durch Überforderung mit echter Vielfalt.</p>
 
-<p>Manche werden im zufällig gezogenen Titel eine Botschaft erkennen. Psychologen nennen das eine Beziehungsidee: Die Welt scheint plötzlich zu einem zu sprechen. In milder Form kennt das fast jeder — beim Radio, beim Blick auf die Uhr, beim zufällig aufgeschlagenen Buch. Das ist Teil der Einladung des Werks — und zugleich ein sehr menschliches, sehr altes Muster, dem Zufall Bedeutung zu geben. Wer sich davon stärker berührt fühlt, als ihm guttut, darf das Werk jederzeit einfach schließen.</p>
+<h3 class="section-title">Inspirationsquellen des Projekts</h3>
 
-<p>Zum Ausklang noch die Herkunft des Namens, der über diesem Werk mitschwingt: <span class="work">GLOBAL RANDOM</span> ist von Welle:Erdball inspiriert — von der Band, wie sie heute klingt, und von jenem Hörspiel, dem sie ihren Namen verdanken. „Hallo! Hier Welle Erdball!" hieß das Werk, mit dem der Schlesische-Funkstunde-Intendant Fritz Walter Bischoff 1928 das letzte große Hörspiel der Weimarer Republik schuf — technisch seiner Zeit voraus, weil er es nicht live sendete, sondern vorproduziert auf Filmton montierte, mit Schnitten und Rhythmen, die vorher im Radio niemand versucht hatte. Genau dieser Erfindergeist, gepaart mit einer Begeisterung für die Elektronik des Commodore 64, trägt die Band bis heute: Sie versteht sich seit 1993 durchgehend als imaginärer Radiosender, nennt ihre Alben „Sendungen", ihre Mitglieder „Moderatoren" — und jede Sendung beginnt mit den Worten „Hallo, hier spricht Welle:Erdball". Ein Werk, das zufällig aus aller Welt sendet, hat mit einem fiktiven Sender, der behauptet, aus dem Äther zu sprechen, mehr gemeinsam, als beim ersten Hinhören auffällt — bis hin zu Songzeilen wie „Zusammenhänge, die gibt es nicht", die dem eigenen Zufallsprinzip dieses Werks fast wie ein Kommentar vorauseilen.</p>
+<p><span class="work">GLOBAL RANDOM</span> ist von Welle:Erdball inspiriert — von der Band, wie sie heute klingt, und von jenem Hörspiel, dem sie ihren Namen verdanken. „Hallo! Hier Welle Erdball!" hieß das Werk, mit dem der Schlesische-Funkstunde-Intendant Fritz Walter Bischoff 1928 das letzte große Hörspiel der Weimarer Republik schuf. Technisch war er seiner Zeit voraus: Er sendete nicht live, sondern montierte vorproduziert auf Filmton — mit Schnitten und Rhythmen, die vorher im Radio niemand versucht hatte. Dieser Erfindergeist und die Begeisterung für die Elektronik des Commodore 64 tragen die Band bis heute: Sie versteht sich seit 1993 durchgehend als imaginärer Radiosender, nennt ihre Alben „Sendungen", ihre Mitglieder „Moderatoren" — und jede Sendung beginnt mit den Worten „Hallo, hier spricht Welle:Erdball". Ein Werk, das zufällig aus aller Welt sendet, und ein fiktiver Sender, der behauptet, aus dem Äther zu sprechen — die beiden haben mehr gemeinsam, als beim ersten Hinhören auffällt. Bis hin zu Songzeilen wie „Zusammenhänge, die gibt es nicht", die dem eigenen Zufallsprinzip dieses Werks fast wie ein Kommentar vorauseilen.</p>
 
 <div class="colophon-end">Konzept, künstlerische Idee: Andreas S. (gh0stless) · KI-assistiert von Claude (FUCKUP — First Universal Cybernetic-Kinetic-Ultramicro-Programmer) · 2026</div>
 <div class="colophon-end" style="margin-top:6px;font-size:.85em;opacity:.75">CC BY-NC-SA 4.0 — Weitergabe frei, nicht-kommerziell, Namensnennung erforderlich.</div>
