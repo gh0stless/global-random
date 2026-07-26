@@ -5448,6 +5448,16 @@ function detectLoginStatus(){
 /* ── Play ── */
 function playReady(){
   if(!queue.length||!EC)return;
+  /* STOP was pressed — every path that can end up here (waitForTrackEnd()'s
+     next() via its fallbackTimer, detectSilentTrack()'s auto-retry and
+     Spotify-outage-cooldown resume, the visibilitychange recovery) is an
+     AUTOMATIC re-trigger, not a fresh user gesture. None of those timers
+     get cancelled by handleStop() — they were armed against the track
+     that was playing at the time and just keep ticking in the background
+     — so without this single choke-point guard, whichever one fires next
+     quietly resumes playback well after the user explicitly stopped it.
+     Cleared by the next explicit PLAY/PLAY NEXT click (see handleBtn()). */
+  if(_userStopped)return;
   if(document.hidden){
     /* Don't attempt to start NEW playback from a backgrounded tab. The
        CURRENTLY playing track keeps going fine while hidden (confirmed:
