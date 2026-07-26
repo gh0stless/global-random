@@ -4584,20 +4584,27 @@ async function discoverCandidates(){
           }
           continue;
         }
-        _consecutiveBatchSkips=0; // reset — this resolve produced a usable new country
-
-        if(shouldSkip(found.title)) continue;
-        const word = cleanTitle(found.title);
-        if(!word || word.length<2) continue;
-
-        /* Every "??" find counts toward the batch-abandon counter, same as
-           a country/artist duplicate — not just once the unknown pool is
-           already full. The first few unknown finds still land in the
-           pool either way (nothing lost), but a streak of 3 tells us this
-           particular batch is skewed toward unresolvable-country tracks;
-           moving to a fresh batch is more likely to turn up real country
-           diversity than continuing to parse the rest of this one. */
-        if(!code){
+        /* Only a resolved country counts as real progress — resetting here
+           unconditionally (the previous version of this code did) meant
+           the unknown-country streak below could never accumulate past 1:
+           every candidate that got this far reset the counter to 0 BEFORE
+           the "is it unknown?" check even ran, so the "abandon after 3
+           unresolvable finds" logic a few lines down was dead code. A
+           batch skewed toward unresolvable-country tracks — common, MB's
+           own country tagging is inconsistent and the Wikipedia-bio
+           fallback doesn't always find a demonym either — used to get
+           chewed through in full (25 candidates × 3 serial MB calls each)
+           instead of abandoned early. */
+        if(code){
+          _consecutiveBatchSkips=0; // reset — this resolve produced a usable new country
+        }else{
+          /* Every "??" find counts toward the batch-abandon counter, same as
+             a country/artist duplicate — not just once the unknown pool is
+             already full. The first few unknown finds still land in the
+             pool either way (nothing lost), but a streak of 3 tells us this
+             particular batch is skewed toward unresolvable-country tracks;
+             moving to a fresh batch is more likely to turn up real country
+             diversity than continuing to parse the rest of this one. */
           _consecutiveBatchSkips++;
           if(_consecutiveBatchSkips>=BATCH_ABANDON_THRESHOLD && _urlBuf.length>0){
             console.log(`%c[batch #${_batchCounter}] ${_consecutiveBatchSkips} consecutive unknown-country finds — abandoning ${_urlBuf.length} remaining, fetching fresh batch`,'color:#f59e0b;font-weight:bold');
@@ -4605,6 +4612,10 @@ async function discoverCandidates(){
             _consecutiveBatchSkips=0;
           }
         }
+
+        if(shouldSkip(found.title)) continue;
+        const word = cleanTitle(found.title);
+        if(!word || word.length<2) continue;
 
         /* Session cap is a hard reject — prevents a country from being
            replayed too often across the WHOLE session regardless of pool
