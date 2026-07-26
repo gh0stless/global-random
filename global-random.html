@@ -1869,10 +1869,29 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
    error response — the browser then reports this as a total CORS/network
    failure (fetch() throws) rather than a readable status code, same root
    cause as the MusicBrainz 503-without-CORS issue. Retries transparently. */
+/* Plain fetch() has no default timeout — a connection that opens but
+   never responds (seen in practice against both MusicBrainz and
+   Wikipedia) leaves the returned promise pending forever: no error,
+   no rejection, nothing. mbFetch() below serializes EVERY MusicBrainz
+   call through one shared queue (_mbQueue = _mbQueue.then(...)), so a
+   single hang there doesn't just stall one candidate — it permanently
+   freezes every future call chained after it for the rest of the
+   session, with zero console output once it happens (exactly the
+   "search just stops, no error, no new batch line, ever again"
+   symptom reported). Wrapping fetch() in an AbortController-based
+   timeout turns that silent-forever hang into a normal thrown error,
+   which both callers' existing retry/backoff logic already knows how
+   to handle. */
+function fetchWithTimeout(url, opts={}, timeoutMs=15000){
+  const controller=new AbortController();
+  const id=setTimeout(()=>controller.abort(),timeoutMs);
+  return fetch(url,{...opts,signal:controller.signal}).finally(()=>clearTimeout(id));
+}
+
 async function fetchWithRetry(url, opts={}, maxRetries=2){
   for(let attempt=0; attempt<=maxRetries; attempt++){
     try{
-      const res=await fetch(url, opts);
+      const res=await fetchWithTimeout(url, opts);
       if((res.status>=500) && attempt<maxRetries){
         await sleep(800*(attempt+1));
         continue;
@@ -2406,7 +2425,7 @@ function mbFetch(url){
       lastReq=Date.now();
       let res;
       try{
-        res=await fetch(url,{headers:{Accept:'application/json'}});
+        res=await fetchWithTimeout(url,{headers:{Accept:'application/json'}});
       }catch(networkErr){
         /* fetch() itself throws when MB sends a 503 without CORS headers on
            the error response — the browser reports this as a total CORS
