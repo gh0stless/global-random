@@ -44,6 +44,17 @@
     playSamWeCanStart(), on the very first PLAY click of the session
     (see handleBtn()), regardless of platform or which branch that click
     then falls into.
+
+  Session changelog — 2026-07-25:
+  - The ambient search tune now always stops the instant PRESS PLAY ON
+    SCREEN plays (updateBtn()'s first reveal), unconditionally — silence
+    until the user presses PLAY or the 30s autostart watchdog fires it.
+    Previously it deliberately kept looping through the click and into
+    the W:E intro's opening on the very first reveal of a session, only
+    fading 3s after that track confirmed playing; that carry-through
+    behavior is gone. Removed the now-dead _tuneStopTimer/
+    tuneStopScheduled scheduling in _playWEIntro() along with it — the
+    "last 5s" tune reprise near the end of the intro is unaffected.
 -->
 <html lang="en">
 <head>
@@ -4819,20 +4830,14 @@ function updateBtn(){
     if(queue.length>0){
       if($('btn').style.display==='none'){
         stopSearchingAnimation();
-        /* This reveal is where the ambient tune used to die — stopping it
-           HERE, at "ready", happens well before the user ever taps/clicks
-           PLAY, let alone before the W:E intro starts. Before the intro
-           has played this session (true for both mobile and desktop now
-           that _playWEIntro() runs on either — see handleBtn()), leave it
-           running straight through this reveal instead: it's meant to
-           carry through the click/tap and into the intro track itself,
-           only fading 3s in once that track is confirmed playing (see
-           _playWEIntro()'s own comment). count===0 only ever reaches this
-           branch once per session, before _weIntroDone can possibly be
-           true yet, so in practice this condition is really "not on a
-           later reveal after the intro already happened" — kept explicit
-           rather than assumed for that reason. */
-        if(_weIntroDone) stopSearchTune();
+        /* The ambient search tune dies HERE, at "ready" — the instant
+           PRESS PLAY ON SCREEN is about to play, unconditionally. Silence
+           from this point until the user actually presses PLAY (or the
+           30s autostart watchdog fires it for them); whatever plays next
+           (a normal track, or the W:E intro on the very first click)
+           starts into a clean, silent stage instead of the tune carrying
+           through the click. */
+        stopSearchTune();
         term('READY.');
         term('PRESS PLAY ON SCREEN');
         playSam(); // S.A.M. sample, only on this regular reveal — not on the WE-intro fallback path
@@ -4987,18 +4992,12 @@ function _showLyricsTicker(){
 
 function _playWEIntro(){
   _weIntroPlaying=true;
-  /* Used to cut the ambient search tune the instant PLAY was pressed —
-     now it deliberately keeps looping (it's already running from the
-     search phase, see playSearchTune()'s call site during search)
-     straight through the button press and INTO the W:E track's own
-     opening, only fading out 3s after that track is confirmed to
-     actually be playing (first onUpdate with a real duration) — a proper
-     overlap at the front, mirroring the overlap already built in at the
-     back (the "last 5s" fade-in below). Scheduled via _tuneStopTimer
-     rather than a bare setTimeout so finish() can cancel it on an early
-     SKIP INTRO — otherwise a skip inside that 3s window would leave a
-     stray timer that could stop a LATER, unrelated search tune (e.g. the
-     next search phase's) out from under it. */
+  /* The ambient search tune is already silent by the time this runs —
+     it's stopped unconditionally back at the PRESS PLAY ON SCREEN reveal
+     in updateBtn(), well before the click that gets here. The track
+     opens into silence; the tune only returns briefly near the very end
+     (the "last 5s" fade-in below) as a transition back into normal
+     playback. */
   $('btn').style.display='none';
   $('skip-intro-btn').style.display='';
   $('embed-wrapper').classList.remove('empty');
@@ -5029,25 +5028,24 @@ function _playWEIntro(){
      half-finished scroll is worse than none, so skip the ticker entirely
      once a short preview is confirmed rather than let it start into a
      doomed crawl. Learned on the very first real update, same moment
-     tuneStopScheduled locks in below. */
+     _previewCheckDone locks in below. */
   let isPreviewIntro=false;
   const _tickerShowTimer=setTimeout(()=>{
     if(isPreviewIntro)return;
     _showLyricsTicker();
   },20000);
-  let done=false, fadeStarted=false, tuneStopScheduled=false, _tuneStopTimer=null;
+  let done=false, fadeStarted=false, _previewCheckDone=false;
   function onUpdate(e){
     const dur=(e.data?.duration??e.duration??0);
     const pos=(e.data?.position??e.position??0);
     if(!dur)return;
-    /* First real update = playback has genuinely started — fade the
-       search tune out 3s from here, not from the PLAY click itself
-       (Spotify's own load/retry latency before audio is audible would
-       otherwise eat unpredictably into that overlap). */
-    if(!tuneStopScheduled){
-      tuneStopScheduled=true;
+    /* First real update = playback has genuinely started. Used once to
+       classify preview vs. full track (see isPreviewIntro above and the
+       ticker-skip logic that reads it) — nothing to fade out here
+       anymore, the search tune has been silent since the reveal. */
+    if(!_previewCheckDone){
+      _previewCheckDone=true;
       if(dur<=31000) isPreviewIntro=true;
-      _tuneStopTimer=setTimeout(stopSearchTune,3000);
     }
     const remaining=dur-pos;
     /* Last 5s of the track: bring the tune up underneath it */
@@ -5060,7 +5058,6 @@ function _playWEIntro(){
   }
   function finish(){
     if(done)return; done=true;
-    clearTimeout(_tuneStopTimer); // see this function's own comment on why
     clearTimeout(_tickerShowTimer); // see its own comment on why
     try{EC.removeListener('playback_update',onUpdate);}catch(_){}
     try{EC.pause();}catch(_){}
