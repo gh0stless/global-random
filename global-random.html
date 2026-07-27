@@ -111,6 +111,20 @@
     already cleared them immediately on pick, desktop playReady() did
     not. Brought desktop in line with mobile: now clears all three
     fields at the same point mobile does, right when a track is picked.
+  - Fixed the C64 terminal history logging every track twice. Root cause:
+    the earlier info-card fallback fix (2026-07-26) made
+    _renderPlayingMeta() always run a second time via loadMeta()'s finally
+    block, on top of its existing early-render call — harmless for the
+    card fields themselves (re-setting the same textContent twice is
+    invisible) but termTrack(), called unconditionally inside
+    _renderPlayingMeta(), unconditionally appends a NEW history line every
+    time it runs, so every track ended up logged twice (visible as the
+    same track showing at both "-1" and "0▶"). Surfaced first on mobile,
+    where short previews make transitions frequent enough to notice, but
+    the same shared code path means desktop was affected too. Fixed with
+    a per-item guard (item._termLogged) so the actual DOM append only
+    ever happens once per track, no matter how many times
+    _renderPlayingMeta() itself re-runs.
 -->
 <html lang="en">
 <head>
@@ -4343,7 +4357,20 @@ function _renderPlayingMeta(item){
   }
   $('cnt-countries').textContent=_playedCountries.size;
   updatePlaylist();
-  termTrack(item._en||fullTitle, artist);
+  /* Guard against double-logging: _renderPlayingMeta() itself is meant to
+     be safely re-run for the same item (loadMeta()'s early render at step
+     5 AND its finally-block guarantee both call it — see that comment for
+     why), and every OTHER side effect above tolerates that (textContent
+     assignments are idempotent, _registerPlayed()/_playCountedIds are
+     self-guarded). termTrack() isn't — it unconditionally appends a new
+     history line every time it's called, so without this it silently
+     logged every track twice, on both desktop and mobile (surfaced first
+     on mobile because short previews make the transitions frequent enough
+     to actually notice the doubled C64-terminal entries). */
+  if(item._termLogged!==spotifyId){
+    item._termLogged=spotifyId;
+    termTrack(item._en||fullTitle, artist);
+  }
   /* Skip the country/artist/lyrics lookups once we know for sure this is
      preview-only playback (30s clips) — that's several API calls
      (Wikipedia, Wikidata, Open-Meteo, MB url-rels) spent on content that
