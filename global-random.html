@@ -4158,6 +4158,25 @@ async function loadMeta(item){
       if(!item.allWords) item.allWords=[];
       const status=item.allWords.length>0?`%c✓ ${item.allWords.length} translations`:'%c⚠ empty (early exit/fail — see [meta] FAIL above if any)';
       console.log(`[meta] done: "${item.word}" ${status}`,item.allWords.length>0?'color:#16a34a':'color:#f59e0b');
+      /* GUARANTEE the info cards reflect the CURRENTLY PLAYING item, same
+         spirit as the allWords guarantee just above — no matter which
+         path out of the chain was taken. Without this, any early exit
+         (no MB recording link, stillRelevant() bailing, a thrown
+         exception — e.g. the transient MusicBrainz 503 that surfaced
+         this) leaves the cards showing whatever was rendered before this
+         track started. Usually that's just the previous track's info —
+         stale but not actively wrong. Right after the W:E intro
+         specifically, it's the intro's own "Welle:Erdball" branding
+         (_renderWEIntroMeta()), which IS actively wrong for whatever
+         ends up actually playing if its own loadMeta() call fails.
+         _renderPlayingMeta() already tolerates missing genre/year/
+         composer/translations fine (see its own fallbacks) — item.word/
+         .artist/.countryCode are set at discovery time, well before
+         loadMeta() ever runs, so there's always at least that much to
+         show. Harmless to call again if the try block above already
+         rendered successfully — just a redundant re-render with the
+         same data. */
+      if(playingItem?.id===item.id) _renderPlayingMeta(item);
     }
   })();
   await item._loading;
