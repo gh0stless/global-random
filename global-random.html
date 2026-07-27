@@ -93,6 +93,24 @@
     on a logged-in desktop session. Time-based scheduling is also just
     more faithful to how real radio automation ("clock wheels")
     actually schedules station IDs in the first place.
+  - Fixed loadMeta()'s catch/early-return paths never re-rendering the
+    info cards on failure, which could leave them stuck on whatever was
+    shown before (e.g. the W:E intro's own branding) if the very first
+    real track's metadata fetch hit a transient error (confirmed via a
+    real console log: HTTP 503 from MusicBrainz). loadMeta()'s finally
+    block now always calls _renderPlayingMeta(item) when the item is
+    still the one actually playing — covers every exit path uniformly.
+
+  Session changelog — 2026-07-27:
+  - Cards were also going stale on the ordinary (non-failure) path:
+    playReady() set t-meta to a "🔍 searching" indicator on every new
+    pick, but never cleared t-title/t-genre/t-artist, so they sat
+    frozen on the JUST-ENDED track for the entire dice-roll + load
+    sequence (and however long loadMeta() then took on top) before
+    _renderPlayingMeta() finally overwrote them — mobileFirstPlay()
+    already cleared them immediately on pick, desktop playReady() did
+    not. Brought desktop in line with mobile: now clears all three
+    fields at the same point mobile does, right when a track is picked.
 -->
 <html lang="en">
 <head>
@@ -5829,6 +5847,15 @@ function playReady(){
                           // time right when it mattered most (audible delay
                           // between dice sound and actual track sound)
   })();
+  /* Clear the previous track's title/genre/artist right now, same as
+     mobileFirstPlay() already does — without this, they sat frozen on
+     the JUST-ENDED track's info through the entire dice-roll + 900ms
+     load-sleep + tryPlay() sequence (and however long loadMeta() takes
+     on top, e.g. a slow MusicBrainz round-trip), which reads as "the
+     app is still showing the old song" even though a new one is
+     already loading. t-meta's 🔍 search indicator already communicated
+     "something new is happening" but the other three fields didn't. */
+  $('t-title').textContent='';$('t-genre').textContent='';$('t-artist').textContent='';
   $('t-meta').textContent=`🔍 "${item.word}"`;
   count++;$('cnt').textContent=count;
   /* Session stats — country count moved to _renderPlayingMeta(), see
