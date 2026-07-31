@@ -31,6 +31,6 @@ This is the canonical source. Two wrapper projects embed this same file unmodifi
 
 ## License
 
-The artwork (`global-random.html` and its content) is licensed under **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** — attribution required, non-commercial use only, share-alike.
+The artwork (`global-random.html` and its content) is licensed under **[CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)** — attribution required, non-commercial use only, **no derivatives/modifications** permitted.
 
 © 2026 Andreas S.
