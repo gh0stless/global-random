@@ -1,6 +1,6 @@
 # GLOBAL RANDOM — Democracy of Sound
 
-Live: **[crazy-midi.de/global-random](https://crazy-midi.de/global-random/)**
+Live: **[crazy-midi.de/global-random](https://crazy-midi.de/global-random/)** — also hosted on **[global-random.radio](https://global-random.radio/)**
 
 A single, self-contained HTML page (~1.9MB, no build step, no backend) that plays music from **247 countries and territories** via real, fairness-weighted randomness — not algorithmic curation. Track titles are translated live into up to 87 languages. Music comes from MusicBrainz (discovery) and Spotify (playback via the official embed); country resolution falls back to Wikipedia artist bios when MusicBrainz's own metadata is empty.
 
