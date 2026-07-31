@@ -2586,7 +2586,26 @@ function _syncPreviewSlots(){
 /* MB API: max 1 req/s — serial queue prevents race conditions */
 let _mbQueue=Promise.resolve();
 function mbFetch(url){
-  _mbQueue=_mbQueue.then(async()=>{
+  /* _mbQueue is the CONTINUATION chain, not the per-call result — deliberately
+     kept separate (see below) after a real-world 5.5h session went totally
+     silent on new MB batches (no more "[batch #N] fetched" lines, ever again)
+     while playback kept draining the existing pool until it ran dry and
+     stopped. Root cause: this used to be `_mbQueue=_mbQueue.then(...)`
+     directly, with the retry logic's final `throw` (exhausted retries, or a
+     non-retried status like 404) rejecting that exact promise. Since
+     `_mbQueue` IS what every future call chains onto via `.then(onFulfilled)`
+     with no rejection handler, one rejected link poisons the entire chain
+     permanently — every subsequent mbFetch(), for the rest of the session,
+     immediately re-rejects with that same stale error WITHOUT ever making a
+     network request again, no matter the URL. discoverCandidates() caught
+     the rejection and kept retrying every 500ms as designed, but each retry
+     died the same instant way, so the pool only ever shrank from there.
+     Fix: `result` carries this call's real outcome (still rejects normally,
+     so existing per-caller error handling is unaffected) while `_mbQueue`
+     itself always resolves — swallowing the error only for chaining
+     purposes — so a single failed request can no longer take down every
+     MB call that comes after it. */
+  const result=_mbQueue.then(async()=>{
     for(let attempt=0; attempt<=3; attempt++){
       const wait=1300-(Date.now()-lastReq);
       if(wait>0)await sleep(wait);
@@ -2611,7 +2630,8 @@ function mbFetch(url){
       return res.json();
     }
   });
-  return _mbQueue;
+  _mbQueue=result.catch(()=>{});
+  return result;
 }
 
 /* Demonym → ISO country code. Wikipedia bios almost always state nationality
