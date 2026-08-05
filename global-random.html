@@ -4198,6 +4198,22 @@ async function loadMeta(item){
       if(!_bl && BROWSER_LANG!=='en' && BROWSER_LANG!==srcLang){
         _bl = await myMemory(fullTitle,srcLang,BROWSER_LANG) || null;
       }
+      /* Last resort, only when the source itself isn't already English:
+         MyMemory's direct srcLang→BROWSER_LANG pair sometimes has weak/no
+         coverage even when both individual EN legs are fine — English is
+         reliably its best-covered language, so pivot srcLang→en→
+         BROWSER_LANG instead of giving up. Deliberately scoped to just
+         this one display slot (not the full 87-language batch): doubling
+         every language's call count for a rarely-needed fallback isn't
+         worth it against MyMemory's existing rate-limit fragility, but one
+         extra call for the one slot that failed twice already is cheap.
+         No-op when srcLang is already 'en' — there's no pivot to make,
+         that's a genuine "MyMemory has nothing for this pair" case with no
+         further fallback available (e.g. "Your Will" → German). */
+      if(!_bl && BROWSER_LANG!=='en' && srcLang!=='en'){
+        const viaEn = _en || await myMemory(fullTitle, srcLang, 'en');
+        if(viaEn) _bl = await myMemory(viaEn, 'en', BROWSER_LANG) || null;
+      }
       item.trans=[_en,_bl].filter(Boolean).join(' · ');
       item.allWords=allWords;
       item._en=_en; // cached for termTrack() at render time
