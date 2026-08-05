@@ -5063,6 +5063,24 @@ async function promoteFromPool(){
     if(availCountries.length===0){
       if(candidates.length===0) break;
       const chosen=candidates.splice(Math.floor(Math.random()*candidates.length),1)[0];
+      /* This candidate can ALSO still be sitting in _unknownPool (every
+         unknown-country find gets pushed to both candidates AND
+         _unknownPool, see discoverCandidates()) or in its own
+         countryStacks[code] bucket — splicing it out of candidates above
+         doesn't touch either of those. Left uncleaned, the exact same
+         object could get drawn a SECOND time later by the dedicated '??'
+         branch below (or a country-weighted draw), landing the identical
+         track in the queue twice. Confirmed live: "New Philanthropist" by
+         Motty Ilowitz queued once via this 'no-country' path, then again
+         minutes later via the '??' path, purely because the stale
+         _unknownPool reference was never cleared out here. */
+      if(chosen.code){
+        const stack=countryStacks[chosen.code];
+        if(stack){ const i=stack.findIndex(c=>c.id===chosen.id); if(i!==-1) stack.splice(i,1); }
+      }else{
+        const i=_unknownPool.findIndex(c=>c.id===chosen.id);
+        if(i!==-1) _unknownPool.splice(i,1);
+      }
       _queueItem(chosen,'no-country');
       continue;
     }
