@@ -1201,6 +1201,7 @@ const _UI_EN={
   welcomeMobileHint:'Make your choice',
   labelGenre:'GENRE',
   labelDonate:'DONATE',
+  lyricsLinkText:'View lyrics',
   moreInfo:'More info',
   welcomePrivacy:"We don't process any cookies or store any data ourselves — for embedded services like Spotify, this can't be ruled out. By making your choice, you accept this. Imprint:"
 };
@@ -1223,6 +1224,7 @@ const _UI_DE={
   welcomeMobileHint:'Triff deine Wahl',
   labelGenre:'GENRE',
   labelDonate:'SPENDEN',
+  lyricsLinkText:'Songtext ansehen',
   moreInfo:'Mehr Infos',
   welcomePrivacy:'Wir selbst verarbeiten keine Cookies oder Speicherdaten — bei eingebundenen Diensten wie Spotify lässt sich das nicht ausschließen. Mit deiner Auswahl akzeptierst du das. Impressum:'
 };
@@ -1240,6 +1242,7 @@ $('label-queue').textContent='▶ '+_UI_EN.labelQueue;
 $('label-played').textContent='▶ '+_UI_EN.labelPlayed;
 $('label-genre').textContent='▶ '+_UI_EN.labelGenre;
 $('label-donate').textContent='▶ '+_UI_EN.labelDonate;
+$('lyrics-link').textContent=_UI_EN.lyricsLinkText+' ↗';
 $('welcome-step1').textContent=_UI_EN.welcomeStep1;
 $('welcome-step2').textContent=_UI_EN.welcomeStep2;
 $('welcome-step3').textContent=_UI_EN.welcomeStep3;
@@ -1263,6 +1266,7 @@ async function localizeUI(){
     $('label-played').textContent='▶ '+_UI_DE.labelPlayed;
     $('label-genre').textContent='▶ '+_UI_DE.labelGenre;
     $('label-donate').textContent='▶ '+_UI_DE.labelDonate;
+    $('lyrics-link').textContent=_UI_DE.lyricsLinkText+' ↗';
     $('welcome-step1').textContent=_UI_DE.welcomeStep1;
     $('welcome-step2').textContent=_UI_DE.welcomeStep2;
     $('welcome-step3').textContent=_UI_DE.welcomeStep3;
@@ -1281,15 +1285,15 @@ async function localizeUI(){
        can invalidate old cached translations just by bumping the number
        again — otherwise a stale cached translation of the OLD English
        text would silently stick around forever after an edit here. */
-    const cacheKey=`gr_ui_i18n_v7_${BROWSER_LANG}`;
+    const cacheKey=`gr_ui_i18n_v8_${BROWSER_LANG}`; // v8: added llt (lyrics link text) — v7-cached entries would just be missing it
     let cached=null;
     try{ cached=JSON.parse(localStorage.getItem(cacheKey)); }catch(_){}
 
-    let hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,mi,ws1,ws2,ws3,ws4,wmh,wp;
+    let hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp;
     if(cached){
-      ({hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,mi,ws1,ws2,ws3,ws4,wmh,wp}=cached);
+      ({hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp}=cached);
     }else{
-      [hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,mi,ws1,ws2,ws3,ws4,wmh,wp]=await Promise.all([
+      [hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp]=await Promise.all([
         myMemory(_UI_EN.hint,'en',BROWSER_LANG),
         myMemory(_UI_EN.giveDesc,'en',BROWSER_LANG),
         myMemory(_UI_EN.giveDonate.replace(' ↗',''),'en',BROWSER_LANG),
@@ -1303,6 +1307,7 @@ async function localizeUI(){
         myMemory(_UI_EN.labelPlayed,'en',BROWSER_LANG),
         myMemory(_UI_EN.labelGenre,'en',BROWSER_LANG),
         myMemory(_UI_EN.labelDonate,'en',BROWSER_LANG),
+        myMemory(_UI_EN.lyricsLinkText,'en',BROWSER_LANG),
         myMemory(_UI_EN.moreInfo,'en',BROWSER_LANG),
         myMemory(_UI_EN.welcomeStep1,'en',BROWSER_LANG),
         myMemory(_UI_EN.welcomeStep2,'en',BROWSER_LANG),
@@ -1316,7 +1321,7 @@ async function localizeUI(){
          cache a wall of nulls for this language, silently showing English
          forever after on every future visit even once the service is
          fine again. */
-      const results={hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,mi,ws1,ws2,ws3,ws4,wmh,wp};
+      const results={hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp};
       if(Object.values(results).filter(Boolean).length>=16){
         try{ localStorage.setItem(cacheKey,JSON.stringify(results)); }catch(_){}
       }
@@ -1334,6 +1339,7 @@ async function localizeUI(){
     if(lp)   $('label-played').textContent='▶ '+lp.toUpperCase();
     if(lg)   $('label-genre').textContent='▶ '+lg.toUpperCase();
     if(ld)   $('label-donate').textContent='▶ '+ld.toUpperCase();
+    if(llt)  $('lyrics-link').textContent=llt+' ↗';
     if(mi)   $('hint-link').textContent=mi;
     if(ws1)  $('welcome-step1').textContent=ws1;
     if(ws2)  $('welcome-step2').textContent=ws2;
@@ -3618,7 +3624,15 @@ async function loadArtistCard(artistName, countryCode, mbid){
         }
         // SPARQL check unreachable/failed → fall through, don't block on it
       }
-      return true; // default: let it through — err on the side of showing the card
+      /* No music claim AND no confirmed non-music category either — genuinely
+         no signal either way. Used to default to true ("let it through"),
+         which is exactly how generic-word collisions (e.g. an artist named
+         after a common noun) slipped past: the colliding Wikipedia article's
+         instance-of type simply wasn't on the NON_MUSIC blacklist. Flipped to
+         false — a real musician almost always has SOME music claim (P136/
+         P106/P412) or a recognizable instance-of; silence on both is now
+         treated as "probably not this artist" rather than "probably fine". */
+      return false;
     }catch(e){return true;}
   }
 
@@ -3714,14 +3728,21 @@ async function loadArtistCard(artistName, countryCode, mbid){
       }
     }catch(e){console.warn('[artistCard] MB url-rels fail:',e.message);}
   }
-  /* 1. try DE */
-  if(!data) data = await fetchWiki('de');
-  /* 2. fall back to EN */
-  if(!data) data = await fetchWiki('en');
-  /* 3. fall back to country native wiki */
+  /* Try native-language articles in priority order: the CURRENT UI
+     language first, then DE, then EN, then the country's own language —
+     deduped so uiLang being 'de' or 'en' doesn't try that language twice.
+     Used to be hardcoded DE-then-EN regardless of uiLang, meaning an
+     English-mode user still got the German article machine-translated via
+     MyMemory whenever one existed, even when a perfectly good native
+     English article was sitting right there unused (confirmed live for
+     Welle:Erdball — real, well-written EN article, never reached because
+     DE was tried first and won). A native match always beats a translated
+     one, so uiLang has to be tried first, not DE unconditionally. */
   const nativeLang = countryCode ? COUNTRY_LANG[countryCode] : null;
-  if(!data && nativeLang && nativeLang!=='de' && nativeLang!=='en'){
-    data = await fetchWiki(nativeLang);
+  const langOrder=[...new Set([uiLang,'de','en',nativeLang].filter(Boolean))];
+  for(const l of langOrder){
+    if(data)break;
+    data = await fetchWiki(l);
   }
   /* Translate bio to uiLang regardless of source */
   if(data && data.srcLang && data.srcLang!==uiLang && data.bio){
@@ -4265,63 +4286,105 @@ function _wikiTitleCase(s){
   return lower.charAt(0).toUpperCase()+lower.slice(1);
 }
 
-const _genreCache={}; // {'genre-lang': extract} — mirrors _ciCache's pattern; genres repeat A LOT
-                       // across tracks (pop, rock, hip hop...), so this cache earns its keep fast
+/* Confirms a Wikidata QID's instance-of chain transitively reaches Q188451
+   ("music genre") — same SPARQL subclass-walk technique as
+   verifyMusicianQid()'s blacklist check above, just a POSITIVE match against
+   one target class instead of a negative match against several excluded
+   ones. Needed because MB genre tags are freeform community text, not a
+   controlled vocabulary: a tag that happens to also be a Wikipedia title for
+   something else entirely (a place, an event, a company...) used to sail
+   straight through and show that unrelated article as if it were the genre. */
+async function verifyGenreQid(qid){
+  if(!qid)return false; // no wikidata item → can't confirm, treat as unverified
+  try{
+    const r=await fetchWithRetry(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qid}&props=claims&format=json&origin=*`);
+    if(!r.ok)return true; // network fail → don't block on verification
+    const d=await r.json();
+    const claims=d.entities?.[qid]?.claims||{};
+    const instOf=(claims.P31||[]).map(c=>c.mainsnak?.datavalue?.value?.id).filter(Boolean);
+    if(instOf.includes('Q188451'))return true; // direct hit, no SPARQL round trip needed
+    if(!instOf.length)return false;
+    const values=instOf.map(q=>`wd:${q}`).join(' ');
+    const sparql=`ASK { VALUES ?i {${values}} ?i wdt:P279* wd:Q188451 . }`;
+    const sr=await fetchWithRetry(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`);
+    if(!sr.ok)return true; // SPARQL unreachable → don't block on it
+    const sd=await sr.json();
+    return sd.boolean===true;
+  }catch(e){return true;} // infra failure → don't block
+}
+
+const _genreCache={}; // {'genre-lang': {summary,href}|null} — null = verified NOT a real genre article.
+                       // Mirrors _ciCache's pattern; genres repeat A LOT across tracks (pop, rock,
+                       // hip hop...), so caching the verification result (not just the text) earns
+                       // its keep fast and avoids re-checking Wikidata for the same tag every time.
 let _genreShown=null;
 async function _updateGenreLink(genre){
   _genreShown=genre;
   const uiLang=BROWSER_LANG||'en';
   const niceGenre=_wikiTitleCase(genre);
-
-  /* Show the raw MB tag + an EN Wikipedia link immediately, same
-     "authenticity first, refine once real data arrives" approach as the
-     country card — the card is never empty while anything's in flight. */
-  $('genre-name').textContent=genre;
-  $('genre-summary').textContent='';
-  $('genre-link').href=`https://en.wikipedia.org/wiki/${encodeURIComponent(niceGenre)}`;
-  $('genre-link').textContent='Wikipedia ↗';
-
   const cacheKey=genre+'-'+uiLang;
-  if(_genreCache[cacheKey]){
-    $('genre-summary').textContent=_genreCache[cacheKey];
+
+  const applyCached=(cached)=>{
+    if(!cached){
+      $('genre-card').style.display='none';$('label-genre').style.display='none';
+      return;
+    }
+    $('genre-card').style.display='';$('label-genre').style.display='';
+    $('genre-name').textContent=genre;
+    $('genre-summary').textContent=cached.summary;
+    $('genre-link').href=cached.href;
+    $('genre-link').textContent='Wikipedia ↗';
+  };
+
+  if(cacheKey in _genreCache){
+    applyCached(_genreCache[cacheKey]);
     return;
   }
+
   const tryWiki=(l,title)=>fetchWithRetry(`https://${l}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
     .then(r=>r.ok?r.json():null).catch(()=>null);
-  (async()=>{
-    let extract='', linkHost='en', linkTitle=niceGenre;
-    /* Try a genuine native-language article first — genre names are short
-       and often DO have their own dedicated article in other languages
-       (e.g. German Wikipedia's own "Hip-Hop" page), which reads better
-       than a machine-translated English extract. Translating just the
-       (short, cheap) genre NAME to find that title, not the whole extract. */
-    if(uiLang!=='en'){
-      const translatedName=await myMemory(genre,'en',uiLang);
-      if(translatedName){
-        const nativeTitle=_wikiTitleCase(translatedName);
-        const d=await tryWiki(uiLang,nativeTitle);
-        if(d?.extract){
-          extract=d.extract.slice(0,400);
-          linkHost=uiLang; linkTitle=nativeTitle;
-        }
+
+  let extract='', linkHost='en', linkTitle=niceGenre, qid=null;
+  /* Try a genuine native-language article first — genre names are short
+     and often DO have their own dedicated article in other languages
+     (e.g. German Wikipedia's own "Hip-Hop" page), which reads better
+     than a machine-translated English extract. Translating just the
+     (short, cheap) genre NAME to find that title, not the whole extract. */
+  if(uiLang!=='en'){
+    const translatedName=await myMemory(genre,'en',uiLang);
+    if(translatedName){
+      const nativeTitle=_wikiTitleCase(translatedName);
+      const d=await tryWiki(uiLang,nativeTitle);
+      if(d?.extract){
+        extract=d.extract.slice(0,400);
+        linkHost=uiLang; linkTitle=nativeTitle;
+        qid=d.wikibase_item||null;
       }
     }
-    /* No native article (or uiLang is English already) → fall back to the
-       English article, translating the extract itself if needed. */
-    if(!extract){
-      const d=await tryWiki('en',niceGenre);
-      extract=(d?.extract||'').slice(0,400);
-      if(extract&&uiLang!=='en'){
-        const t=await myMemory(extract,'en',uiLang);
-        if(t) extract=t;
-      }
+  }
+  /* No native article (or uiLang is English already) → fall back to the
+     English article, translating the extract itself if needed. */
+  if(!extract){
+    const d=await tryWiki('en',niceGenre);
+    extract=(d?.extract||'').slice(0,400);
+    qid=qid||d?.wikibase_item||null;
+    if(extract&&uiLang!=='en'){
+      const t=await myMemory(extract,'en',uiLang);
+      if(t) extract=t;
     }
-    _genreCache[cacheKey]=extract;
-    if(_genreShown!==genre)return; // a different track's genre took over while this was in flight
-    if(extract) $('genre-summary').textContent=extract;
-    $('genre-link').href=`https://${linkHost}.wikipedia.org/wiki/${encodeURIComponent(linkTitle)}`;
-    $('genre-link').textContent='Wikipedia ↗';
-  })();
+  }
+
+  if(_genreShown!==genre)return; // a different track's genre took over while this was in flight
+
+  /* No article found at all → nothing to verify or show. Otherwise confirm
+     via Wikidata that this article is actually about a music genre before
+     ever displaying it. */
+  const verified = extract ? await verifyGenreQid(qid) : false;
+  if(_genreShown!==genre)return; // re-check — the Wikidata round trip takes real time too
+
+  const result = verified ? {summary:extract, href:`https://${linkHost}.wikipedia.org/wiki/${encodeURIComponent(linkTitle)}`} : null;
+  _genreCache[cacheKey]=result;
+  applyCached(result);
 }
 
 function _renderPlayingMeta(item){
@@ -4340,12 +4403,15 @@ function _renderPlayingMeta(item){
   /* Genre → Wikipedia card. Only for a genuine MB genre tag, not the
      composer/"Classical" heuristic guess above — that's a different kind
      of information (a name/label match, not a real genre classification)
-     and doesn't deserve the same confident link-out treatment. */
+     and doesn't deserve the same confident link-out treatment.
+     Card itself stays hidden until _updateGenreLink() confirms via Wikidata
+     that the tag actually resolves to a real music-genre article — MB genre
+     tags are freeform community text, not a controlled vocabulary, so a tag
+     that happens to collide with an unrelated Wikipedia title (a place, an
+     event...) used to show that wrong article. See verifyGenreQid(). */
+  $('genre-card').style.display='none';$('label-genre').style.display='none';
   if(genre){
-    $('genre-card').style.display='';$('label-genre').style.display='';
     _updateGenreLink(genre);
-  }else{
-    $('genre-card').style.display='none';$('label-genre').style.display='none';
   }
 
   Object.assign(playingItem,{word:fullTitle,info:item.info,trans:item.trans,color:playingItem.color});
@@ -5234,7 +5300,7 @@ _showWEBanner(true);
    behind skipMetaLookups/_previewConfirmed like a normal track would be —
    this fires once per session regardless, cost is negligible for a
    handful of extra lookups. */
-function _renderWEIntroMeta(){
+async function _renderWEIntroMeta(){
   $('t-title').textContent='Welle:Erdball';
   $('t-artist').textContent='Welle:Erdball';
   $('t-genre').textContent='Electronic';
@@ -5242,7 +5308,23 @@ function _renderWEIntroMeta(){
   $('genre-card').style.display='';$('label-genre').style.display='';
   _weGenreCard();
   loadCountryInfo('DE');
-  loadArtistCard('Welle:Erdball','DE',undefined);
+  /* Awaited (not fire-and-forget like the other calls here) because
+     loadArtistCard() ends by unconditionally setting the lyrics-card's
+     display itself — hidden, since with mbid undefined it never even looks
+     for an MB lyrics relationship (see its own d.social?.lyrics branch).
+     That runs asynchronously and finishes AFTER this function's own
+     synchronous body, so the hardcoded show below used to lose the race:
+     it set display='' first, then loadArtistCard()'s own async completion
+     clobbered it back to 'none' moments later — the card never stayed
+     visible. Awaiting it here guarantees our hardcoded show always runs
+     last. */
+  await loadArtistCard('Welle:Erdball','DE',undefined);
+  /* Lyrics card: hardcoded, not the normal MB-relationship lookup. No MB
+     "lyrics" relationship exists for this specific C=64 tribute track, but
+     a real lyrics page does — found manually, confirmed by Andreas, not
+     guessed. */
+  $('lyrics-link').href='https://www.lyricsondemand.com/welle_erdball/film_funk_fernsehen_c64';
+  $('lyrics-card').style.display='';$('label-lyrics').style.display='';
 }
 /* _updateGenreLink()'s normal approach — translate the genre WORD, then
    guess a same-titled Wikipedia article exists — works fine for most
@@ -5435,6 +5517,12 @@ function handleBtn(){
   if(_pressPlayLine){ _pressPlayLine.classList.remove('pulse'); _pressPlayLine=null; }
   _userStopped=false; // any explicit PLAY/PLAY NEXT click cancels a prior STOP
   if(count===0) playSamWeCanStart(); // once per session, on the very first PLAY click, same moment regardless of which branch below it then falls into
+  /* The frozen "SEARCHING...." terminal line (dots stopped mid-cycle by
+     stopSearchingAnimation() back at the READY reveal) otherwise just sits
+     there above READY./PRESS PLAY ON SCREEN forever — stale and confusing
+     once the S.A.M. "Wir können starten!" sample has just announced that
+     the search is actually over. Removed right here, same moment. */
+  if(_searchDotsLine){ _searchDotsLine.remove(); _searchDotsLine=null; }
   if(isMobile&&count===0){
     _gestureListening=false;
     if(!_weIntroDone){
