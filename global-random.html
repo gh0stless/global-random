@@ -5981,6 +5981,18 @@ function detectLoginStatus(){
 }
 
 /* ── Play ── */
+function _hideAllInfoCards(){
+  /* Unconditional immediate hide of every info card + its label — called at the single
+     track-transition choke point in playReady() (see the embed-wrapper.empty comment just
+     below for why there, specifically) so the just-finished track's artist/genre/lyrics/
+     country info disappears the instant the track ends, instead of lingering until the new
+     track's own metadata resolves and each card's own loader gets around to clearing it. */
+  $('artist-card').style.display='none';$('label-artist').style.display='none';
+  $('lyrics-card').style.display='none';$('label-lyrics').style.display='none';
+  $('genre-card').style.display='none';$('label-genre').style.display='none';
+  $('country-applet').style.display='none';$('label-country').style.display='none';
+}
+
 function playReady(){
   if(!queue.length||!EC)return;
   /* STOP was pressed — every path that can end up here (waitForTrackEnd()'s
@@ -6055,6 +6067,7 @@ function playReady(){
      Spotify-stall-recovery auto-resume), so putting it here covers all of
      them at once instead of duplicating the same line at each call site. */
   $('embed-wrapper').classList.add('empty');
+  _hideAllInfoCards();
   stopSearchTune(); // stop loop AND audio — must happen BEFORE playDiceSound(),
                      // otherwise the two could briefly overlap if the search
                      // tune was still mid-clip when this fires
