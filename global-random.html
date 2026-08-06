@@ -5223,7 +5223,8 @@ async function promoteFromPool(){
         const i=_unknownPool.findIndex(c=>c.id===chosen.id);
         if(i!==-1) _unknownPool.splice(i,1);
       }
-      _queueItem(chosen,'no-country');
+      try{ _queueItem(chosen,'no-country'); }
+      catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
       continue;
     }
 
@@ -5233,7 +5234,8 @@ async function promoteFromPool(){
       const chosen=_unknownPool.splice(Math.floor(Math.random()*_unknownPool.length),1)[0];
       const mIdx=candidates.findIndex(c=>c.id===chosen.id);
       if(mIdx!==-1) candidates.splice(mIdx,1);
-      _queueItem(chosen,'??');
+      try{ _queueItem(chosen,'??'); }
+      catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
       continue;
     }
 
@@ -5244,7 +5246,8 @@ async function promoteFromPool(){
     const chosen=stack.splice(Math.floor(Math.random()*stack.length),1)[0];
     const mIdx=candidates.findIndex(c=>c.id===chosen.id);
     if(mIdx!==-1) candidates.splice(mIdx,1);
-    _queueItem(chosen,'rnd');
+    try{ _queueItem(chosen,'rnd'); }
+    catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
   }
   if(queue.length>0&&count===0) updateBtn();
   setBuffer();
@@ -5285,10 +5288,15 @@ function _queueItem(chosen, tag){
   const item={id:chosen.id,word:chosen.word,color,info:'',trans:'',title:chosen.title,
               allWords:null,countryCode:chosen.code,recId:chosen.recId,slot};
   queue.push(item);
+  /* Sync the preview widget for this slot FIRST, before any of the render calls below that
+     could throw (e.g. updateFlagBar() on an unexpected country code) — otherwise the item is
+     genuinely in `queue` (correct slot and all) but its preview widget never gets loadUri()'d,
+     and since queue.length has already reached BUFFER_SIZE, nothing else re-triggers a sync
+     for it; that slot stays visually stuck until this specific item is later picked to play. */
+  _syncPreviewSlots();
   console.log(`%c[queue ${queue.length}/${BUFFER_SIZE}] %c${code} %c${chosen.word} %cby ${chosen.artist||'?'} %c(${tag}, slot ${slot})`,
     'color:#7c3aed;font-weight:bold','color:#ea580c;font-weight:bold','color:#16a34a','color:#666;font-style:italic','color:#999');
   setBuffer(); updatePlaylist(); updateBtn();
-  _syncPreviewSlots();
   /* No prefetch anymore — see loadMeta()'s "8: Resolved" branch for why:
      translating a queued-but-not-yet-playing candidate wasted the full
      ~86-language batch on any candidate that ended up passed over or
