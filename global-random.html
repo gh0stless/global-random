@@ -5917,6 +5917,22 @@ function _playWEIntro(){
       if(count===0) playSamWeCanStart();
       playReady();
     }else{
+      /* Empty-queue fallback: the queue.length>0 branch above gets all of
+         this for free via playReady() (see _showWEBanner(false)/
+         _hideAllInfoCards() at its own top) — this branch skips playReady()
+         entirely (nothing to play yet), so without doing the same cleanup
+         here directly, the W:E footer banner, the artist/genre/lyrics/
+         country cards, the main "now playing" embed, and the t-title/
+         t-artist/t-genre/t-meta text all stayed frozen on the intro's
+         content while the app silently went back into "searching" behind
+         them — visible as the W:E banner/cards/player just sitting there
+         through the whole empty-queue wait. Done immediately, before the
+         SAM sample below, not after — no reason to delay it. */
+      _showWEBanner(false);
+      _hideAllInfoCards();
+      $('embed-wrapper').classList.add('empty');
+      $('t-title').textContent='';$('t-artist').textContent='';
+      $('t-genre').textContent='';$('t-meta').textContent='';
       /* "I am searching, please stand by." — the other half of the
          original combined welcome sample, now split off specifically for
          this fallback. Awaited before the tune restarts, same
