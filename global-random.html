@@ -4497,41 +4497,61 @@ async function _updateGenreLink(genre){
 
   const tryWiki=(l,title)=>fetchWithRetry(`https://${l}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
     .then(r=>r.ok?r.json():null).catch(()=>null);
+  /* Real cross-language link for `title` on en.wikipedia, via the classic action API (CORS
+     open, confirmed via origin=*) — NOT a myMemory-translated guess at what the native title
+     might be. Guessing used to genuinely misfire: translating the bare genre name "Electronic"
+     to Arabic landed on "إلكترون" ("Electron", the physics particle) purely by coincidence of
+     word-level translation, nothing to do with the real Arabic article
+     "موسيقى إلكترونية" (Electronic music) that langlinks finds directly. */
+  const getLangLink=async(title,lang)=>{
+    try{
+      const r=await fetchWithRetry(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=langlinks&lllang=${lang}&format=json&origin=*`);
+      if(!r.ok)return null;
+      const j=await r.json();
+      const page=Object.values(j?.query?.pages||{})[0];
+      return page?.langlinks?.[0]?.['*']||null;
+    }catch(_){ return null; }
+  };
 
-  let extract='', linkHost='en', linkTitle=niceGenre, qid=null;
-  /* Try a genuine native-language article first — genre names are short
-     and often DO have their own dedicated article in other languages
-     (e.g. German Wikipedia's own "Hip-Hop" page), which reads better
-     than a machine-translated English extract. Translating just the
-     (short, cheap) genre NAME to find that title, not the whole extract. */
-  if(uiLang!=='en'){
-    const translatedName=await myMemory(genre,'en',uiLang);
-    if(translatedName){
-      const nativeTitle=_wikiTitleCase(translatedName);
+  /* Resolve the correct English article first. A bare genre tag like "Electronic" often lands
+     on a disambiguation page (Q16278455 — "topics referred to by the same term"), not the
+     actual music-genre article ("Electronic music") — retry with " music" appended in that
+     case. This matters for everything downstream: langlinks off a disambiguation page would
+     just find the disambiguation page in the other language too, not the real genre article. */
+  let enDoc=await tryWiki('en',niceGenre);
+  let enTitle=niceGenre;
+  if(!enDoc?.extract||enDoc.type==='disambiguation'){
+    const musicTitle=niceGenre+' music';
+    const d2=await tryWiki('en',musicTitle);
+    if(d2?.extract&&d2.type!=='disambiguation'){ enDoc=d2; enTitle=musicTitle; }
+  }
+
+  let extract='', linkHost='en', linkTitle=enTitle, qid=enDoc?.wikibase_item||null;
+  if(enDoc?.extract) extract=enDoc.extract.slice(0,400);
+
+  /* Genuine native-language article via langlinks, not a translation guess. */
+  if(extract&&uiLang!=='en'){
+    const nativeTitle=await getLangLink(enTitle,uiLang);
+    if(nativeTitle){
       const d=await tryWiki(uiLang,nativeTitle);
       if(d?.extract){
         extract=d.extract.slice(0,400);
         linkHost=uiLang; linkTitle=nativeTitle;
-        qid=d.wikibase_item||null;
+        qid=d.wikibase_item||qid;
       }
     }
   }
-  /* No native article (or uiLang is English already) → fall back to the
-     English article, translating the extract itself if needed. */
-  if(!extract){
-    const d=await tryWiki('en',niceGenre);
-    extract=(d?.extract||'').slice(0,400);
-    qid=qid||d?.wikibase_item||null;
-    if(extract&&uiLang!=='en'){
-      /* MyMemory's free tier caps requests at 500 bytes URL-encoded — a plain 400-char
-         English extract can already exceed that once spaces/punctuation are %-encoded
-         (confirmed: 400 raw chars of a real Wikipedia extract → 522 encoded bytes), so the
-         translation call silently failed while short strings (UI labels etc.) stayed fine.
-         Trim tighter just for the translation input; the untranslated 400-char extract is
-         still used as-is if this comes back null. */
-      const t=await myMemory(extract.slice(0,300),'en',uiLang);
-      if(t) extract=t;
-    }
+  /* No native article via langlinks (or uiLang is English already) → translate the English
+     extract itself instead. */
+  if(extract&&linkHost==='en'&&uiLang!=='en'){
+    /* MyMemory's free tier caps requests at 500 bytes URL-encoded — a plain 400-char
+       English extract can already exceed that once spaces/punctuation are %-encoded
+       (confirmed: 400 raw chars of a real Wikipedia extract → 522 encoded bytes), so the
+       translation call silently failed while short strings (UI labels etc.) stayed fine.
+       Trim tighter just for the translation input; the untranslated 400-char extract is
+       still used as-is if this comes back null. */
+    const t=await myMemory(extract.slice(0,300),'en',uiLang);
+    if(t) extract=t;
   }
 
   if(_genreShown!==genre)return; // a different track's genre took over while this was in flight
