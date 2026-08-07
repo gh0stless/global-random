@@ -6260,6 +6260,20 @@ function detectLoginStatus(){
     const dur=(e.data?.duration??e.duration??0);
     if(dur>60000&&!isLoggedIn){
       isLoggedIn=true;
+      /* An EARLIER track could have already set _previewConfirmed=true below —
+         dur<=31000 alone doesn't actually prove "not logged in", it just means
+         THAT one track happened to be short (a real short song/interlude in the
+         pool is entirely possible even fully logged in). That false positive
+         used to stick forever: nothing ever cleared it, so a genuinely
+         logged-in session with one short track early on permanently lost its
+         artist/country cards (skipMetaLookups in _renderPlayingMeta()) AND its
+         full-language snow (the isMobile||_previewConfirmed check in
+         translateAll()) for the rest of the session, even though "✓ logged in"
+         correctly showed the whole time. Confirmed via a live screenshot: genre
+         card populated fine (not gated by this flag), artist/country cards
+         both silently missing. This is the one place that can prove the
+         earlier verdict wrong, so it's the one place that un-sets it. */
+      _previewConfirmed=false;
       try{EC.removeListener('playback_update',onUpdate);}catch(_){}
       $('login-status').textContent='✓ logged in';
       $('login-status').style.color='var(--green)';
