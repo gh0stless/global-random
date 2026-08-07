@@ -5643,106 +5643,116 @@ function _showLyricsTicker(){
   track.classList.add('we-scroll-active');
 }
 
-/* Hardcoded snow-bubble words for the W:E intro, one entry per snow language (same
-   84-language set as TRANSLATE_TO, minus 'ha'/'dz' - see below). This is a one-off fixed piece
-   of content (same track, same text, every session) so a static table beats a live translateAll()
-   call: zero quota risk, zero chance of the intro silently showing no snow because MyMemory was
-   down. Sourced from 'Radio Wellenlänge Erdball' via MyMemory (fetching WITH 'Radio' gives far
-   safer context resolution than the bare phrase would - 'Welle'/wave alone drifts to sea-wave in
-   French/Spanish, and 'Frequenz' alone drifts to "how often" in several other languages; see the
-   test2.html comparison this was built from), then the translated "Radio" word was stripped
-   from each result by hand, hand-reviewed against real vocabulary per language, and a few actual
-   MT errors fixed (ru/uk/bg/lt had literally just repeated their "radio wave" translation,
-   missing the "length" concept entirely; fil drifted to "storm surge"; rw had a duplicated-word
-   glitch). ha excluded: MyMemory returns garbage for it regardless of input text. dz excluded:
-   never got a verifiable, complete translation across any phrase tested. */
+/* Hardcoded snow-bubble words for the W:E intro, one entry per snow language (83
+   languages - see below for the 3 excluded). This is a one-off fixed piece of content (same
+   track, same text, every session) so a static table beats a live translateAll() call: zero
+   quota risk, zero chance of the intro silently showing no snow because MyMemory was down.
+
+   Went through three source-phrase iterations (tracked via test2.html) before landing here:
+   "Welle Erdball" alone drifts to the sea-wave meaning in French/Spanish; "Frequenz Erdball"
+   alone drifts to a "how often" meaning in several other languages; "Wellenlänge Erdball"
+   (wavelength) avoided both traps but is just a physics property. "Station Erdball" actually
+   matches what Welle:Erdball MEANS as a band name (a broadcast identity/channel), not just a
+   translation of the word "Welle" - and several languages resolved it even more cleanly than
+   the wavelength phrase did (e.g. Ukrainian's "Станція «Глобус»" reads like a real station
+   name). Fetched as "Radio Station Erdball" for reliable context resolution, then the
+   translated "Radio" word was stripped from each result by hand and hand-reviewed against real
+   vocabulary per language, fixing a few actual MT errors along the way (Arabic was a pure
+   phonetic transliteration of the English words, not a real translation; several languages left
+   the globe-word in English even though that same language got it right on an earlier phrase -
+   reused that language's own confirmed-correct word instead).
+
+   rw excluded: unreliable across 3 of 4 phrases tested, including one result MyMemory matched
+   to what looks like an unrelated place-name database entry rather than translating anything.
+   ha excluded: MyMemory returns garbage for it on every phrase tried, not text-specific.
+   dz excluded: never got a verifiable, complete translation across any phrase tested. */
 const WE_INTRO_SNOW_WORDS=[
-  {word:'Wellenlänge Erdball',color:'#ff79c6',lang:'de'},
-  {word:'波长地球仪',color:'#ef4444',lang:'zh'},
-  {word:'波長地球儀',color:'#0284c7',lang:'ja'},
-  {word:'파장 지구본',color:'#16a34a',lang:'ko'},
-  {word:'तरंगदैर्ध्य ग्लोब',color:'#ca8a04',lang:'hi'},
-  {word:'তরঙ্গদৈর্ঘ্য গ্লোব',color:'#d97706',lang:'bn'},
-  {word:'Bước Sóng Địa Cầu',color:'#15803d',lang:'vi'},
-  {word:'ลูกโลกความยาวคลื่น',color:'#a21caf',lang:'th'},
-  {word:'Panjang Gelombang Dunia',color:'#166534',lang:'id'},
-  {word:'Panjang Gelombang Dunia',color:'#065f46',lang:'ms'},
-  {word:'Wavelength Globe',color:'#0891b2',lang:'tl'},
-  {word:'Долгионы глоб',color:'#1d4ed8',lang:'mn'},
-  {word:'तरंगदैर्ध्य ग्लोब',color:'#ea580c',lang:'ne'},
-  {word:'ਤਰੰਗ-ਲੰਬਾਈ ਗਲੋਬ',color:'#c026d3',lang:'pa'},
-  {word:'તરંગલંબાઇ ગ્લોબ',color:'#0369a1',lang:'gu'},
-  {word:'அலைநீளம் குளோப்',color:'#7c2d12',lang:'ta'},
-  {word:'తరంగదైర్ఘ్యం గ్లోబ్',color:'#854d0e',lang:'te'},
-  {word:'तरंगलांबी ग्लोब',color:'#0f766e',lang:'mr'},
-  {word:'طول موج گلوب',color:'#6d28d9',lang:'ur'},
-  {word:'كرة الطول الموجي',color:'#d97706',lang:'ar'},
-  {word:'طول موج کره زمین',color:'#7c2d12',lang:'fa'},
-  {word:'גלובוס אורך גל',color:'#0f766e',lang:'he'},
-  {word:'Dalga Boyu Küre',color:'#b45309',lang:'tr'},
-  {word:'Dalğa Uzunluğu Qlobusu',color:'#ef4444',lang:'az'},
-  {word:'толқын ұзындығы глобус',color:'#0284c7',lang:'kk'},
-  {word:'Ալիքի Գլոբուս',color:'#7c3aed',lang:'hy'},
-  {word:'ტალღის სიგრძე გლობუსი',color:'#c026d3',lang:'ka'},
-  {word:'longueur d\'onde globe terrestre',color:'#7c3aed',lang:'fr'},
-  {word:'Globo de Longitud de Onda',color:'#ea580c',lang:'es'},
-  {word:'Globo de comprimento de onda',color:'#059669',lang:'pt'},
-  {word:'lunghezza d\'onda globo terrestre',color:'#db2777',lang:'it'},
-  {word:'Glob cu lungime de undă',color:'#b91c1c',lang:'ro'},
-  {word:'Globus de Longitud d\'Ona',color:'#1d4ed8',lang:'ca'},
-  {word:'Longèdonn Globe',color:'#6d28d9',lang:'ht'},
-  {word:'golflengte aardbol',color:'#6d28d9',lang:'nl'},
-  {word:'Våglängdsglob',color:'#0369a1',lang:'sv'},
-  {word:'Bølgelengdeglobus',color:'#1e40af',lang:'no'},
-  {word:'Bølgelængdeglobus',color:'#854d0e',lang:'da'},
-  {word:'Bylgjulengdarhnöttur',color:'#0f766e',lang:'is'},
-  {word:'Golflengte Aardbol',color:'#059669',lang:'af'},
-  {word:'Глобус длины волны',color:'#c026d3',lang:'ru'},
-  {word:'Globus o długości fali',color:'#b91c1c',lang:'pl'},
-  {word:'Koule vlnové délky',color:'#1d4ed8',lang:'cs'},
-  {word:'Zemeguľa vlnovej dĺžky',color:'#0369a1',lang:'sk'},
-  {word:'Глобус довжини хвилі',color:'#854d0e',lang:'uk'},
-  {word:'Глобус на дължина на вълна',color:'#1e3a5f',lang:'bg'},
-  {word:'Valna duljina globusa',color:'#ef4444',lang:'hr'},
-  {word:'Globus talasne dužine',color:'#ca8a04',lang:'sr'},
-  {word:'Valovna dolžina globusa',color:'#16a34a',lang:'sl'},
-  {word:'Глобус со бранова должина',color:'#a21caf',lang:'mk'},
-  {word:'Σφαίρα μήκους κυμάτων',color:'#1e40af',lang:'el'},
-  {word:'Hullámhossz-gömb',color:'#b45309',lang:'hu'},
-  {word:'Aallonpituuspallo',color:'#059669',lang:'fi'},
-  {word:'lainepikkuse gloobus',color:'#0284c7',lang:'et'},
-  {word:'viļņu garuma globuss',color:'#c026d3',lang:'lv'},
-  {word:'Bangos ilgio gaublys',color:'#7c3aed',lang:'lt'},
-  {word:'Globi i gjatësisë së valës',color:'#0891b2',lang:'sq'},
-  {word:'Lurraren uhin-luzera',color:'#7c2d12',lang:'eu'},
-  {word:'Globu tat-Tul tal-Mewġa',color:'#1d4ed8',lang:'mt'},
-  {word:'Cruinneog Thonnfhad',color:'#16a34a',lang:'ga'},
-  {word:'Glôb Tonfedd',color:'#0f766e',lang:'cy'},
-  {word:'כוואַליע ערד',color:'#d97706',lang:'yi'},
-  {word:'Globu ya Wimbi',color:'#065f46',lang:'sw'},
-  {word:'Wavelength Globe',color:'#ca8a04',lang:'yo'},
-  {word:'Wavelength Globe',color:'#d97706',lang:'ig'},
-  {word:'ሞገድ ግሎብ',color:'#b45309',lang:'am'},
-  {word:'Mowjadaha Globe',color:'#0891b2',lang:'so'},
-  {word:'I-Wavelength Globe',color:'#059669',lang:'zu'},
-  {word:'I-Wavelength Globe',color:'#0f766e',lang:'xh'},
-  {word:'Глобус даўжыні хвалі',color:'#7c3aed',lang:'be'},
-  {word:'Globus talasne dužine',color:'#0891b2',lang:'bs'},
-  {word:'Haba ng Alon ng Daigdig',color:'#0284c7',lang:'fil'},
-  {word:'សកលរលក',color:'#c026d3',lang:'km'},
-  {word:'Толкун узундугу глобус',color:'#16a34a',lang:'ky'},
-  {word:'ຄວາມຍາວຄື້ນໂລກ',color:'#d97706',lang:'lo'},
-  {word:'Halavan\'ny Onjan\'ny Tany',color:'#059669',lang:'mg'},
-  {word:'လှိုင်းအလျား ကမ္ဘာလုံး',color:'#1d4ed8',lang:'my'},
-  {word:'موج ګلوب',color:'#7c2d12',lang:'ps'},
-  {word:'Urusobe rw\'umuvuduko',color:'#0f766e',lang:'rw'},
-  {word:'තරංග ආයාම ග්ලෝබ්',color:'#ca8a04',lang:'si'},
-  {word:'Дарозии мавҷ глобуси',color:'#b91c1c',lang:'tg'},
-  {word:'ሞገድ ግሎብ',color:'#1e40af',lang:'ti'},
-  {word:'Dünýäniň tolkun uzynlygy',color:'#065f46',lang:'tk'},
-  {word:'Yerning to\'lqin uzunligi',color:'#0891b2',lang:'uz'},
-  {word:'Longitudo Undae Orbis',color:'#78350f',lang:'la'}
+  {word:'Station Erdball',color:'#ff79c6',lang:'de'},
+  {word:'环球广播电台',color:'#ef4444',lang:'zh'},
+  {word:'放送局地球儀',color:'#0284c7',lang:'ja'},
+  {word:'방송국 글로브',color:'#16a34a',lang:'ko'},
+  {word:'स्टेशन ग्लोब',color:'#ca8a04',lang:'hi'},
+  {word:'স্টেশন গ্লোব',color:'#d97706',lang:'bn'},
+  {word:'Đài Phát Thanh Địa Cầu',color:'#15803d',lang:'vi'},
+  {word:'ลูกโลกสถานี',color:'#a21caf',lang:'th'},
+  {word:'Stasiun Dunia',color:'#166534',lang:'id'},
+  {word:'Stesen Dunia',color:'#065f46',lang:'ms'},
+  {word:'Istasyon ng Daigdig',color:'#0891b2',lang:'tl'},
+  {word:'станцын глоб',color:'#1d4ed8',lang:'mn'},
+  {word:'स्टेशन ग्लोब',color:'#ea580c',lang:'ne'},
+  {word:'ਸਟੇਸ਼ਨ ਗਲੋਬ',color:'#c026d3',lang:'pa'},
+  {word:'સ્ટેશન ગ્લોબ',color:'#0369a1',lang:'gu'},
+  {word:'ஸ்டேஷன் குளோப்',color:'#7c2d12',lang:'ta'},
+  {word:'స్టేషన్ గ్లోబ్',color:'#854d0e',lang:'te'},
+  {word:'स्टेशन ग्लोब',color:'#0f766e',lang:'mr'},
+  {word:'اسٹیشن گلوب',color:'#6d28d9',lang:'ur'},
+  {word:'كرة المحطة',color:'#d97706',lang:'ar'},
+  {word:'ایستگاه کره زمین',color:'#7c2d12',lang:'fa'},
+  {word:'תחנת הגלובוס',color:'#0f766e',lang:'he'},
+  {word:'İstasyon Küre',color:'#b45309',lang:'tr'},
+  {word:'Stansiya Qlobusu',color:'#ef4444',lang:'az'},
+  {word:'Станция глобусы',color:'#0284c7',lang:'kk'},
+  {word:'Կայան Գլոբուս',color:'#7c3aed',lang:'hy'},
+  {word:'სადგური გლობუსი',color:'#c026d3',lang:'ka'},
+  {word:'Station du Globe',color:'#7c3aed',lang:'fr'},
+  {word:'Estación del Globo Terráqueo',color:'#ea580c',lang:'es'},
+  {word:'Globo da Estação',color:'#059669',lang:'pt'},
+  {word:'Stazione del Globo Terrestre',color:'#db2777',lang:'it'},
+  {word:'Globul postului',color:'#b91c1c',lang:'ro'},
+  {word:'Globus d\'Estació',color:'#1d4ed8',lang:'ca'},
+  {word:'Estasyon Glòb',color:'#6d28d9',lang:'ht'},
+  {word:'Station Aardbol',color:'#6d28d9',lang:'nl'},
+  {word:'Stationsglob',color:'#0369a1',lang:'sv'},
+  {word:'Stasjonsglobus',color:'#1e40af',lang:'no'},
+  {word:'Stationsglobus',color:'#854d0e',lang:'da'},
+  {word:'Stöðvarhnöttur',color:'#0f766e',lang:'is'},
+  {word:'Stasie Aardbol',color:'#059669',lang:'af'},
+  {word:'Глобус станции',color:'#c026d3',lang:'ru'},
+  {word:'Globus stacji',color:'#b91c1c',lang:'pl'},
+  {word:'Glóbus stanice',color:'#1d4ed8',lang:'cs'},
+  {word:'Zemeguľa stanice',color:'#0369a1',lang:'sk'},
+  {word:'Станція «Глобус»',color:'#854d0e',lang:'uk'},
+  {word:'станция Глобус',color:'#1e3a5f',lang:'bg'},
+  {word:'Globus postaje',color:'#ef4444',lang:'hr'},
+  {word:'Globus stanice',color:'#ca8a04',lang:'sr'},
+  {word:'Postaja globusa',color:'#16a34a',lang:'sl'},
+  {word:'Станица Глобус',color:'#a21caf',lang:'mk'},
+  {word:'Σφαίρα σταθμού',color:'#1e40af',lang:'el'},
+  {word:'Állomás-gömb',color:'#b45309',lang:'hu'},
+  {word:'Asemapallo',color:'#059669',lang:'fi'},
+  {word:'Jaama gloobus',color:'#0284c7',lang:'et'},
+  {word:'stacijas globuss',color:'#c026d3',lang:'lv'},
+  {word:'stoties gaublys',color:'#7c3aed',lang:'lt'},
+  {word:'Globi i stacionit',color:'#0891b2',lang:'sq'},
+  {word:'Lurreko katea',color:'#7c2d12',lang:'eu'},
+  {word:'Globu tal-Istazzjon',color:'#1d4ed8',lang:'mt'},
+  {word:'Cruinneog Stáisiúin',color:'#16a34a',lang:'ga'},
+  {word:'Glôb Gorsaf',color:'#0f766e',lang:'cy'},
+  {word:'סטאַנציע ערד',color:'#d97706',lang:'yi'},
+  {word:'Globu ya Kituo',color:'#065f46',lang:'sw'},
+  {word:'Station Globe',color:'#ca8a04',lang:'yo'},
+  {word:'Station Globe',color:'#d97706',lang:'ig'},
+  {word:'ጣቢያ ግሎብ',color:'#b45309',lang:'am'},
+  {word:'Saldhigga Globe',color:'#0891b2',lang:'so'},
+  {word:'I-Station Globe',color:'#059669',lang:'zu'},
+  {word:'I-Globe yeSikhululo',color:'#0f766e',lang:'xh'},
+  {word:'Глобус станцыі',color:'#7c3aed',lang:'be'},
+  {word:'Globus stanice',color:'#0891b2',lang:'bs'},
+  {word:'Istasyon sa Daigdig',color:'#0284c7',lang:'fil'},
+  {word:'សកលស្ថានីយ៍',color:'#c026d3',lang:'km'},
+  {word:'Бекет глобусу',color:'#16a34a',lang:'ky'},
+  {word:'ສະຖານີໂລກ',color:'#d97706',lang:'lo'},
+  {word:'Station Globe',color:'#059669',lang:'mg'},
+  {word:'ဘူတာ ကမ္ဘာလုံး',color:'#1d4ed8',lang:'my'},
+  {word:'سټیشن ګلوب',color:'#7c2d12',lang:'ps'},
+  {word:'මධ්‍යස්ථාන ග්ලෝබ්',color:'#ca8a04',lang:'si'},
+  {word:'Глобуси истгоҳи',color:'#b91c1c',lang:'tg'},
+  {word:'ጣብያ ግሎብ',color:'#1e40af',lang:'ti'},
+  {word:'Dünýäniň stansiýasy',color:'#065f46',lang:'tk'},
+  {word:'Yer stansiyasi',color:'#0891b2',lang:'uz'},
+  {word:'Statio Orbis',color:'#78350f',lang:'la'}
 ];
+
 
 function _playWEIntro(){
   _weIntroPlaying=true;
