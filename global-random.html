@@ -3488,11 +3488,11 @@ function _countryTipText(code){
   const lastPlayed=_relativeTimeAgo(_lastPlayedByCountry[code]);
   const lastPlayedSuffix=lastPlayed?` · last played ${lastPlayed}`:'';
   if(code==='??'){
-    return `🌐 Unknown: ${_unknownPool.length}/${CAP} · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
+    return `🌐 Unknown: ${_unknownPool.length}/${CAP} in pool · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
   }
   const cName=_countryDisplayName(code,BROWSER_LANG||'en');
   const poolLen=countryStacks[code]?.length||0;
-  return `${flagEmoji(code)} ${cName}: ${poolLen}/${CAP} · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
+  return `${flagEmoji(code)} ${cName}: ${poolLen}/${CAP} in pool · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
 }
 
 function _foundSlotPct(code){
