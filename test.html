@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>GLOBAL RANDOM — Country Name Batch Translator</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#111;color:#eee;max-width:900px;margin:20px auto;padding:0 16px}
+  h1{font-size:1.2rem}
+  label{display:block;margin:12px 0 4px}
+  input[type=text]{font-size:1rem;padding:6px 8px;width:120px;background:#222;color:#eee;border:1px solid #555;border-radius:4px}
+  button{font-size:1rem;padding:8px 16px;margin:8px 8px 8px 0;background:#2a6;color:#fff;border:none;border-radius:4px;cursor:pointer}
+  button:disabled{background:#555;cursor:not-allowed}
+  #stopBtn{background:#a33}
+  #progress{margin:12px 0;font-family:monospace}
+  #bar{height:10px;background:#333;border-radius:5px;overflow:hidden;margin:4px 0}
+  #barFill{height:100%;background:#2a6;width:0%;transition:width .2s}
+  #log{height:200px;overflow-y:auto;background:#000;color:#9f9;font-family:monospace;font-size:.8rem;padding:8px;border-radius:4px;white-space:pre-wrap}
+  textarea{width:100%;height:300px;font-family:monospace;font-size:.8rem;background:#222;color:#eee;border:1px solid #555;border-radius:4px;padding:8px;box-sizing:border-box}
+  .warn{color:#fa3}
+  .err{color:#f66}
+</style>
+</head>
+<body>
+<h1>GLOBAL RANDOM — Country Name Batch Translator (Test Tool)</h1>
+<p>Holt Übersetzungen für alle 247 Ländernamen von MyMemory in einer Zielsprache. Läuft rein im Browser, kein Server nötig. Fortschritt wird in localStorage gesichert — bei Abbruch (z.B. Quota) einfach Sprache erneut eingeben und "Start" drücken, es macht dort weiter, wo es aufgehört hat.</p>
+
+<label for="lang">Zielsprache (MyMemory-Code, z.B. ar, fr, es, ru, zh-CN):</label>
+<input type="text" id="lang" value="ar">
+<div>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn" disabled>Stop</button>
+  <button id="resetBtn">Reset (diese Sprache verwerfen)</button>
+  <button id="copyBtn">In Zwischenablage kopieren</button>
+</div>
+
+<div id="progress">0 / 0</div>
+<div id="bar"><div id="barFill"></div></div>
+<div id="log"></div>
+
+<label for="out">Ergebnis (JS-Objekt, zum Einfügen in global-random.html):</label>
+<textarea id="out" readonly></textarea>
+
+<script>
+/* Same 247 (code, English-wiki-name) pairs as CAPITALS[code].wiki in global-random.html.
+   Kept as a flat literal here so this tool has zero dependency on the main app file. */
+const COUNTRIES = [{"code":"CN","en":"China"},{"code":"JP","en":"Japan"},{"code":"KR","en":"South Korea"},{"code":"IN","en":"India"},{"code":"BD","en":"Bangladesh"},{"code":"VN","en":"Vietnam"},{"code":"TH","en":"Thailand"},{"code":"ID","en":"Indonesia"},{"code":"MY","en":"Malaysia"},{"code":"PH","en":"Philippines"},{"code":"MN","en":"Mongolia"},{"code":"NP","en":"Nepal"},{"code":"PK","en":"Pakistan"},{"code":"EG","en":"Egypt"},{"code":"SA","en":"Saudi Arabia"},{"code":"AE","en":"United Arab Emirates"},{"code":"MA","en":"Morocco"},{"code":"LB","en":"Lebanon"},{"code":"JO","en":"Jordan"},{"code":"DZ","en":"Algeria"},{"code":"TN","en":"Tunisia"},{"code":"IQ","en":"Iraq"},{"code":"SY","en":"Syria"},{"code":"LY","en":"Libya"},{"code":"YE","en":"Yemen"},{"code":"OM","en":"Oman"},{"code":"KW","en":"Kuwait"},{"code":"QA","en":"Qatar"},{"code":"BH","en":"Bahrain"},{"code":"SD","en":"Sudan"},{"code":"IR","en":"Iran"},{"code":"IL","en":"Israel"},{"code":"TR","en":"Turkey"},{"code":"AZ","en":"Azerbaijan"},{"code":"KZ","en":"Kazakhstan"},{"code":"AM","en":"Armenia"},{"code":"GE","en":"Georgia"},{"code":"FR","en":"France"},{"code":"ES","en":"Spain"},{"code":"BR","en":"Brazil"},{"code":"IT","en":"Italy"},{"code":"RO","en":"Romania"},{"code":"HT","en":"Haiti"},{"code":"DE","en":"Germany"},{"code":"NL","en":"Netherlands"},{"code":"SE","en":"Sweden"},{"code":"NO","en":"Norway"},{"code":"DK","en":"Denmark"},{"code":"IS","en":"Iceland"},{"code":"ZA","en":"South Africa"},{"code":"RU","en":"Russia"},{"code":"PL","en":"Poland"},{"code":"CZ","en":"Czech Republic"},{"code":"SK","en":"Slovakia"},{"code":"UA","en":"Ukraine"},{"code":"BG","en":"Bulgaria"},{"code":"HR","en":"Croatia"},{"code":"RS","en":"Serbia"},{"code":"SI","en":"Slovenia"},{"code":"MK","en":"North Macedonia"},{"code":"GR","en":"Greece"},{"code":"HU","en":"Hungary"},{"code":"FI","en":"Finland"},{"code":"EE","en":"Estonia"},{"code":"LV","en":"Latvia"},{"code":"LT","en":"Lithuania"},{"code":"AL","en":"Albania"},{"code":"MT","en":"Malta"},{"code":"IE","en":"Ireland"},{"code":"GB","en":"United Kingdom"},{"code":"KE","en":"Kenya"},{"code":"NG","en":"Nigeria"},{"code":"ET","en":"Ethiopia"},{"code":"SO","en":"Somalia"},{"code":"US","en":"United States"},{"code":"MX","en":"Mexico"},{"code":"AR","en":"Argentina"},{"code":"CO","en":"Colombia"},{"code":"PE","en":"Peru"},{"code":"CL","en":"Chile"},{"code":"VE","en":"Venezuela"},{"code":"PT","en":"Portugal"},{"code":"CA","en":"Canada"},{"code":"AU","en":"Australia"},{"code":"NZ","en":"New Zealand"},{"code":"AT","en":"Austria"},{"code":"CH","en":"Switzerland"},{"code":"BE","en":"Belgium"},{"code":"BY","en":"Belarus"},{"code":"TW","en":"Taiwan"},{"code":"HK","en":"Hong Kong"},{"code":"MO","en":"Macau"},{"code":"PS","en":"State of Palestine"},{"code":"XK","en":"Kosovo"},{"code":"PR","en":"Puerto Rico"},{"code":"VA","en":"Vatican City"},{"code":"GL","en":"Greenland"},{"code":"FO","en":"Faroe Islands"},{"code":"EH","en":"Western Sahara"},{"code":"GI","en":"Gibraltar"},{"code":"BM","en":"Bermuda"},{"code":"KY","en":"Cayman Islands"},{"code":"IM","en":"Isle of Man"},{"code":"GG","en":"Guernsey"},{"code":"JE","en":"Jersey"},{"code":"AS","en":"American Samoa"},{"code":"GU","en":"Guam"},{"code":"VI","en":"United States Virgin Islands"},{"code":"NC","en":"New Caledonia"},{"code":"PF","en":"French Polynesia"},{"code":"RE","en":"Réunion"},{"code":"MQ","en":"Martinique"},{"code":"GP","en":"Guadeloupe"},{"code":"GF","en":"French Guiana"},{"code":"CK","en":"Cook Islands"},{"code":"NU","en":"Niue"},{"code":"AX","en":"Åland Islands"},{"code":"AD","en":"Andorra"},{"code":"AF","en":"Afghanistan"},{"code":"AG","en":"Antigua and Barbuda"},{"code":"AO","en":"Angola"},{"code":"BA","en":"Bosnia and Herzegovina"},{"code":"BB","en":"Barbados"},{"code":"BF","en":"Burkina Faso"},{"code":"BI","en":"Burundi"},{"code":"BJ","en":"Benin"},{"code":"BN","en":"Brunei"},{"code":"BO","en":"Bolivia"},{"code":"BS","en":"Bahamas"},{"code":"BT","en":"Bhutan"},{"code":"BW","en":"Botswana"},{"code":"BZ","en":"Belize"},{"code":"CD","en":"Democratic Republic of the Congo"},{"code":"CF","en":"Central African Republic"},{"code":"CG","en":"Republic of the Congo"},{"code":"CI","en":"Ivory Coast"},{"code":"CM","en":"Cameroon"},{"code":"CR","en":"Costa Rica"},{"code":"CU","en":"Cuba"},{"code":"CV","en":"Cape Verde"},{"code":"CY","en":"Cyprus"},{"code":"DJ","en":"Djibouti"},{"code":"DM","en":"Dominica"},{"code":"DO","en":"Dominican Republic"},{"code":"EC","en":"Ecuador"},{"code":"ER","en":"Eritrea"},{"code":"FJ","en":"Fiji"},{"code":"FM","en":"Federated States of Micronesia"},{"code":"GA","en":"Gabon"},{"code":"GD","en":"Grenada"},{"code":"GH","en":"Ghana"},{"code":"GM","en":"The Gambia"},{"code":"GN","en":"Guinea"},{"code":"GQ","en":"Equatorial Guinea"},{"code":"GT","en":"Guatemala"},{"code":"GW","en":"Guinea-Bissau"},{"code":"GY","en":"Guyana"},{"code":"HN","en":"Honduras"},{"code":"JM","en":"Jamaica"},{"code":"KG","en":"Kyrgyzstan"},{"code":"KH","en":"Cambodia"},{"code":"KI","en":"Kiribati"},{"code":"KM","en":"Comoros"},{"code":"KN","en":"Saint Kitts and Nevis"},{"code":"KP","en":"North Korea"},{"code":"LA","en":"Laos"},{"code":"LC","en":"Saint Lucia"},{"code":"LI","en":"Liechtenstein"},{"code":"LK","en":"Sri Lanka"},{"code":"LR","en":"Liberia"},{"code":"LS","en":"Lesotho"},{"code":"LU","en":"Luxembourg"},{"code":"MC","en":"Monaco"},{"code":"MD","en":"Moldova"},{"code":"ME","en":"Montenegro"},{"code":"MG","en":"Madagascar"},{"code":"MH","en":"Marshall Islands"},{"code":"ML","en":"Mali"},{"code":"MM","en":"Myanmar"},{"code":"MR","en":"Mauritania"},{"code":"MU","en":"Mauritius"},{"code":"MV","en":"Maldives"},{"code":"MW","en":"Malawi"},{"code":"MZ","en":"Mozambique"},{"code":"NA","en":"Namibia"},{"code":"NE","en":"Niger"},{"code":"NI","en":"Nicaragua"},{"code":"NR","en":"Nauru"},{"code":"PA","en":"Panama"},{"code":"PG","en":"Papua New Guinea"},{"code":"PW","en":"Palau"},{"code":"PY","en":"Paraguay"},{"code":"RW","en":"Rwanda"},{"code":"SB","en":"Solomon Islands"},{"code":"SC","en":"Seychelles"},{"code":"SG","en":"Singapore"},{"code":"SL","en":"Sierra Leone"},{"code":"SM","en":"San Marino"},{"code":"SN","en":"Senegal"},{"code":"SR","en":"Suriname"},{"code":"SS","en":"South Sudan"},{"code":"ST","en":"São Tomé and Príncipe"},{"code":"SV","en":"El Salvador"},{"code":"SZ","en":"Eswatini"},{"code":"TD","en":"Chad"},{"code":"TG","en":"Togo"},{"code":"TJ","en":"Tajikistan"},{"code":"TL","en":"East Timor"},{"code":"TM","en":"Turkmenistan"},{"code":"TO","en":"Tonga"},{"code":"TT","en":"Trinidad and Tobago"},{"code":"TV","en":"Tuvalu"},{"code":"TZ","en":"Tanzania"},{"code":"UG","en":"Uganda"},{"code":"UY","en":"Uruguay"},{"code":"UZ","en":"Uzbekistan"},{"code":"VC","en":"Saint Vincent and the Grenadines"},{"code":"VU","en":"Vanuatu"},{"code":"WS","en":"Samoa"},{"code":"ZM","en":"Zambia"},{"code":"ZW","en":"Zimbabwe"},{"code":"CW","en":"Curaçao"},{"code":"YT","en":"Mayotte"},{"code":"AI","en":"Anguilla"},{"code":"AW","en":"Aruba"},{"code":"AQ","en":"Antarctica"},{"code":"PM","en":"Saint Pierre and Miquelon"},{"code":"MF","en":"Collectivity of Saint Martin"},{"code":"VG","en":"British Virgin Islands"},{"code":"SX","en":"Sint Maarten"},{"code":"FK","en":"Falkland Islands"},{"code":"TC","en":"Turks and Caicos Islands"},{"code":"MS","en":"Montserrat"},{"code":"TK","en":"Tokelau"},{"code":"BL","en":"Saint Barthélemy"},{"code":"BQ","en":"Caribbean Netherlands"},{"code":"MP","en":"Northern Mariana Islands"},{"code":"CC","en":"Cocos (Keeling) Islands"},{"code":"UM","en":"United States Minor Outlying Islands"},{"code":"BV","en":"Bouvet Island"},{"code":"CX","en":"Christmas Island"},{"code":"HM","en":"Heard Island and McDonald Islands"},{"code":"IO","en":"British Indian Ocean Territory"},{"code":"NF","en":"Norfolk Island"},{"code":"PN","en":"Pitcairn Islands"},{"code":"SH","en":"Saint Helena, Ascension and Tristan da Cunha"},{"code":"WF","en":"Wallis and Futuna"}];
+
+const MYMEMORY_EMAIL = 'info@crazy-midi.de'; // same registered email as the main app, for the 10x/50k-char boost
+const DELAY_MS = 350; // gentle pacing between requests
+
+const $ = id => document.getElementById(id);
+let running = false;
+let stopRequested = false;
+
+function storageKey(lang){ return `gr_country_batch_${lang}`; }
+
+function loadProgress(lang){
+  try{ return JSON.parse(localStorage.getItem(storageKey(lang))||'{}'); }catch(e){ return {}; }
+}
+function saveProgress(lang, results){
+  localStorage.setItem(storageKey(lang), JSON.stringify(results));
+}
+
+function log(msg, cls){
+  const line = document.createElement('div');
+  if(cls) line.className = cls;
+  line.textContent = msg;
+  $('log').appendChild(line);
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+function renderOutput(lang, results){
+  const varName = `COUNTRY_${lang.toUpperCase().replace(/[^A-Z0-9]/g,'_')}`;
+  const entries = COUNTRIES
+    .filter(c => results[c.code])
+    .map(c => `  ${c.code}:'${results[c.code].replace(/'/g,"\\'")}'`)
+    .join(',\n');
+  $('out').value = `/* Country code -> ${lang} display name (from MyMemory, auto-generated by test.html) */\nconst ${varName} = {\n${entries}\n};`;
+}
+
+function updateProgress(done, total){
+  $('progress').textContent = `${done} / ${total}`;
+  $('barFill').style.width = total ? `${(done/total*100).toFixed(1)}%` : '0%';
+}
+
+async function translateOne(text, target){
+  const emailParam = MYMEMORY_EMAIL ? `&de=${encodeURIComponent(MYMEMORY_EMAIL)}` : '';
+  const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${target}${emailParam}`);
+  const data = await res.json();
+  const status = data.responseStatus;
+  if(status && status !== 200 && status !== '200'){
+    const quota = (status===403||status==='403'||status===429||status==='429');
+    return { error: quota ? 'quota' : `status ${status}` };
+  }
+  const t = data.responseData?.translatedText;
+  if(!t) return { error: 'empty' };
+  return { text: t };
+}
+
+async function run(){
+  const lang = $('lang').value.trim();
+  if(!lang){ log('Bitte Zielsprache eingeben.', 'err'); return; }
+
+  running = true; stopRequested = false;
+  $('startBtn').disabled = true;
+  $('stopBtn').disabled = false;
+
+  const results = loadProgress(lang);
+  const todo = COUNTRIES.filter(c => !results[c.code]);
+  updateProgress(COUNTRIES.length - todo.length, COUNTRIES.length);
+  renderOutput(lang, results);
+  log(`Start: ${lang} — ${todo.length} offen von ${COUNTRIES.length} (${COUNTRIES.length - todo.length} bereits im Cache).`);
+
+  for(const c of todo){
+    if(stopRequested){ log('Gestoppt.', 'warn'); break; }
+    try{
+      const r = await translateOne(c.en, lang);
+      if(r.error === 'quota'){
+        log(`STOP: Quota/Rate-Limit erreicht bei ${c.code} (${c.en}). Später fortsetzen — Fortschritt ist gespeichert.`, 'err');
+        break;
+      }
+      if(r.error){
+        log(`Fehler bei ${c.code} (${c.en}): ${r.error} — übersprungen, Fallback bleibt Englisch.`, 'warn');
+      } else {
+        results[c.code] = r.text;
+        log(`${c.code}: ${c.en} -> ${r.text}`);
+      }
+    }catch(e){
+      log(`Netzwerkfehler bei ${c.code}: ${e.message}`, 'err');
+    }
+    saveProgress(lang, results);
+    updateProgress(COUNTRIES.length - todo.length + (todo.indexOf(c)+1), COUNTRIES.length);
+    renderOutput(lang, results);
+    await new Promise(r => setTimeout(r, DELAY_MS));
+  }
+
+  running = false;
+  $('startBtn').disabled = false;
+  $('stopBtn').disabled = true;
+  log('Fertig (oder pausiert). Ergebnis unten kopieren.');
+}
+
+$('startBtn').addEventListener('click', () => { if(!running) run(); });
+$('stopBtn').addEventListener('click', () => { stopRequested = true; });
+$('resetBtn').addEventListener('click', () => {
+  const lang = $('lang').value.trim();
+  if(!lang) return;
+  localStorage.removeItem(storageKey(lang));
+  $('log').innerHTML = '';
+  $('out').value = '';
+  updateProgress(0, COUNTRIES.length);
+  log(`Cache für ${lang} gelöscht.`);
+});
+$('copyBtn').addEventListener('click', () => {
+  $('out').select();
+  document.execCommand('copy');
+  log('In Zwischenablage kopiert.');
+});
+
+updateProgress(0, COUNTRIES.length);
+</script>
+</body>
+</html>

@@ -1940,6 +1940,24 @@ const COUNTRY_DE = {AF:'Afghanistan',AL:'Albanien',DZ:'Algerien',AD:'Andorra',AO
   IO:'Britisches Territorium im Indischen Ozean',NF:'Norfolkinsel',
   PN:'Pitcairninseln',SH:'St. Helena',WF:'Wallis und Futuna'};
 
+/* Country code -> Arabic display name, fetched via tools/test.html (batch MyMemory
+   run over VPN to dodge the dev machine's exhausted quota). Six entries MyMemory had
+   no translation for (fell back to English) and one wrong match (Cook Islands got the
+   Marshall Islands translation) were corrected by hand against ar.wikipedia.org. */
+const COUNTRY_AR={CN:'الصين',JP:'اليابان',KR:'كوريا الجنوبية',IN:'الهند',BD:'بنغلاديش',VN:'فيتنام',TH:'تايلاند',ID:'إندونيسيا',MY:'ماليزيا',PH:'الفلبين',MN:'منغوليا',NP:'نيبال',PK:'باكستان',EG:'مصر',SA:'المملكة العربية السعودية',AE:'دولة الإمارات العربية المتحدة',MA:'المغرب',LB:'لبنان',JO:'الأردن',DZ:'الجزائر',TN:'تونس',IQ:'العراق',SY:'سوريا',LY:'ليبيا',YE:'اليمن',OM:'عُمان',KW:'الكويت',QA:'قطر',BH:'البحرين',SD:'السودان',IR:'إيران',IL:'إسرائيل',TR:'تركيا',AZ:'أذربيجان',KZ:'كازاخستان',AM:'أرمينيا',GE:'جورجيا',FR:'فرنسا',ES:'إسبانيا',BR:'البرازيل',IT:'إيطاليا',RO:'رومانيا',HT:'هاييتي',DE:'ألمانيا',NL:'هولندا',SE:'السويد',NO:'النرويج',DK:'الدنمارك',IS:'آيسلندا',ZA:'جنوب أفريقيا',RU:'روسيا',PL:'بولندا',CZ:'جمهورية التشيك',SK:'سلوفاكيا',UA:'أوكرانيا',BG:'بلغاريا',HR:'كرواتيا',RS:'صربيا',SI:'سلوفينيا',MK:'مقدونيا الشمالية',GR:'اليونان',HU:'المجر',FI:'فنلندا',EE:'استونيا',LV:'لاتفيا',LT:'ليتوانيا',AL:'ألبانيا',MT:'مالطا',IE:'أيرلندا',GB:'المملكة المتحدة',KE:'كينيا',NG:'نيجيريا',ET:'إثيوبيا',SO:'الصومال',US:'الولايات المتحدة الأمريكية',MX:'المكسيك',AR:'الأرجنتين',CO:'كولومبيا',PE:'البيرو',CL:'تشيلي',VE:'فنزويلا',PT:'البرتغال',CA:'كندا',AU:'أستراليا',NZ:'نيوزيلندا',AT:'النمسا',CH:'سويسرا',BE:'بلجيكا',BY:'بيلاروسيا',TW:'تايوان',HK:'هونغ كونغ',MO:'ماكاو',PS:'دولة فلسطين',XK:'كوسوفو',PR:'بورتوريكو',VA:'مدينة الفاتيكان',GL:'الأرض الخضراء',FO:'جزر فارو',EH:'الصحراء الغربية',GI:'جبل طارق',BM:'برمودا',KY:'جزر كايمان',IM:'جزيرة آيل أوف مان',GG:'جيرنسي',JE:'جيرسي',AS:'ساموا الأمريكية',GU:'غوام',VI:'جزر فرجن التابعة للولايات المتحدة',NC:'كاليدونيا الجديدة',PF:'بولينيزيا الفرنسية',RE:'ريونيون',MQ:'مارتينيك',GP:'غوادلوب',GF:'جويانا الفرنسية',CK:'جزر كوك',NU:'نيوي',AX:'جزر آلاند',AD:'أندورا',AF:'أفغانستان',AG:'أنتيغوا وبربودا',AO:'أنغولا',BA:'البوسنة والهرسك',BB:'باربادوس',BF:'بوركينا فاسو',BI:'بوروندي',BJ:'بنين',BN:'بروناي',BO:'بوليفيا',BS:'جزر البهاماز',BT:'بوتان',BW:'بوتسوانا',BZ:'بيليز',CD:'جمهورية الكونغو الديمقراطية',CF:'جمهورية أفريقيا الوسطى',CG:'جمهورية الكونغو',CI:'ساحل العاج',CM:'الكاميرون',CR:'كوستاريكا',CU:'كوبا',CV:'الرأس الأخضر',CY:'قبرص',DJ:'جيبوتي',DM:'دومينيكا',DO:'جمهورية الدومينيكان',EC:'الإكوادور',ER:'إريتريا',FJ:'فيجي',FM:'ولايات ميكرونيسيا المتحدة',GA:'الغابون',GD:'غرينادا',GH:'غانا',GM:'غامبيا',GN:'غينيا',GQ:'غينيا الاستوائية',GT:'غواتيمالا',GW:'غينيا بيساو',GY:'غيانا',HN:'الهندوراس',JM:'جامايكا',KG:'قيرغيزستان',KH:'كمبوديا',KI:'كيريباتي',KM:'جزر القمر',KN:'سانت كيتس ونيفيس',KP:'كوريا الشمالية',LA:'لاوس',LC:'سان لوسيا',LI:'ليختنشتاين',LK:'سري لانكا',LR:'ليبيريا',LS:'ليسوتو',LU:'لوكسمبورغ',MC:'موناكو',MD:'مولدوفا',ME:'الجبل الأسود',MG:'مدغشقر',MH:'جزر مارشال',ML:'مالي',MM:'ميانمار',MR:'موريتانيا',MU:'موريشيوس',MV:'جزر المالديف',MW:'ملاوي',MZ:'موزمبيق',NA:'ناميبيا',NE:'النيجر',NI:'نيكاراغوا',NR:'ناورو',PA:'بنما',PG:'بابوا غينيا الجديدة',PW:'بالاو',PY:'باراغواي',RW:'رواندا',SB:'جزر سليمان',SC:'سيشل',SG:'سنغافورة',SL:'سيراليون',SM:'سان مارينو',SN:'السنغال',SR:'سورينام',SS:'جنوب السودان',ST:'سان تومي وبرينسيبي',SV:'السلفادور',SZ:'إيسواتيني',TD:'تشاد',TG:'توغو',TJ:'طاجيكستان',TL:'تيمور الشرقية',TM:'تركمانستان',TO:'تونغا',TT:'ترينداد وتوباجو',TV:'توفالو',TZ:'تنزانيا',UG:'أوغندا',UY:'الأوروغواي',UZ:'أوزباكستان',VC:'سانت فنسنت والغرينادين',VU:'فانواتو',WS:'ساموا',ZM:'زامبيا',ZW:'زيمبابوي',CW:'كوراساو',YT:'مايوت',AI:'أنغويلا',AW:'أروبا',AQ:'أنتاركتيكا',PM:'سان بيار وميكلون',MF:'جماعة القديس مارتن',VG:'جزر فيرجن البريطانية',SX:'سينت مارتن',FK:'جزر فوكلاند',TC:'جزر توركس وكايكوس',MS:'مونتسيرات',TK:'توكيلاو',BL:'سانت بارتيليمي',BQ:'جزر المملكة الهولندية الكاريبية',MP:'جزر ماريانا الشمالية',CC:'جزر كوكوس (كيلينج)',UM:'جزر الولايات المتحدة الصغيرة النائية',BV:'جزيرة بوفيت',CX:'جزيرة كريسماس',HM:'جزيرة هيرد وجزر ماكدونالد',IO:'إقليم المحيط الهندي البريطاني',NF:'جزيرة نورفولك',PN:'جزر بيتكيرن',SH:'سانت هيلينا وأسينشين وتريستان دا كونا',WF:'واليس وفوتونا'};
+
+/* Registry of static country-name dicts, keyed by uiLang. Add a new language here once
+   its full set has been fetched via test.html — languages NOT in this registry fall back
+   to a live per-page myMemory() translation (loadCountryInfo) or plain English (tooltips,
+   which can't afford a live fetch per hover). */
+const COUNTRY_NAME_DICTS={de:COUNTRY_DE,ar:COUNTRY_AR};
+
+function _countryDisplayName(code,lang){
+  const enName=CAPITALS[code]?.wiki?.replace(/_/g,' ')||code;
+  if(lang==='en')return enName;
+  return COUNTRY_NAME_DICTS[lang]?.[code]||enName;
+}
+
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* Generic retry wrapper for flaky external APIs (Wikipedia, Open-Meteo, etc.)
@@ -3435,14 +3453,16 @@ function _appendFoundSlot(code){
 /* Small relative-time formatter for the pool-freshness timestamp — "just
    now" / "Xs ago" / "Xm ago" rather than a raw clock time, since what
    actually matters here is how STALE the pool is, not the exact moment. */
+/* Deliberately English-only, no i18n — these are terse system/telemetry labels
+   ("played", "ago", "pool updated"...) shown in a hover tooltip. Routing them
+   through myMemory like the rest of the UI would make the tooltip's content
+   depend on a flaky third-party API being up; "played" is understood by anyone
+   who can operate a computer, so it's not worth that fragility. Only the
+   COUNTRY NAME itself (see _countryDisplayName) is actually translated, since
+   that has a reliable static-dict/live-fallback path instead. */
 function _relativeTimeAgo(ts){
   if(!ts) return null;
   const secs=Math.max(0,Math.floor((Date.now()-ts)/1000));
-  if(BROWSER_LANG==='de'){
-    if(secs<5) return 'gerade eben';
-    if(secs<60) return `vor ${secs}s`;
-    return `vor ${Math.floor(secs/60)}min`;
-  }
   if(secs<5) return 'just now';
   if(secs<60) return `${secs}s ago`;
   return `${Math.floor(secs/60)}min ago`;
@@ -3459,26 +3479,18 @@ function _relativeTimeAgo(ts){
    together. */
 function _countryTipText(code){
   const plays=_playCountByCountry[code]||0;
-  const playsLabel=BROWSER_LANG==='de'
-    ? `${plays}× gespielt`
-    : `${plays} play${plays===1?'':'s'}`;
+  const playsLabel=`${plays} play${plays===1?'':'s'}`;
   const freshness=_relativeTimeAgo(_poolLastUpdate[code]);
-  const freshnessSuffix=freshness
-    ? ` · ${BROWSER_LANG==='de'?'Pool aktualisiert':'pool updated'} ${freshness}`
-    : '';
+  const freshnessSuffix=freshness?` · pool updated ${freshness}`:'';
   /* Only shown once the country has actually played at least once —
      "last played never" would just be noise for a country still sitting
      in IM POOL/IN QUEUE that hasn't had its turn yet. */
   const lastPlayed=_relativeTimeAgo(_lastPlayedByCountry[code]);
-  const lastPlayedSuffix=lastPlayed
-    ? ` · ${BROWSER_LANG==='de'?'zuletzt gespielt':'last played'} ${lastPlayed}`
-    : '';
+  const lastPlayedSuffix=lastPlayed?` · last played ${lastPlayed}`:'';
   if(code==='??'){
-    const name=BROWSER_LANG==='de'?'Unbekannt':'Unknown';
-    return `🌐 ${name}: ${_unknownPool.length}/${CAP} · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
+    return `🌐 Unknown: ${_unknownPool.length}/${CAP} · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
   }
-  const enName=CAPITALS[code]?.wiki?.replace(/_/g,' ')||code;
-  const cName=BROWSER_LANG==='de'?(COUNTRY_DE[code]||enName):enName;
+  const cName=_countryDisplayName(code,BROWSER_LANG||'en');
   const poolLen=countryStacks[code]?.length||0;
   return `${flagEmoji(code)} ${cName}: ${poolLen}/${CAP} · ${playsLabel}${freshnessSuffix}${lastPlayedSuffix}`;
 }
@@ -3972,9 +3984,11 @@ async function loadCountryInfo(code){
   const uiLang=BROWSER_LANG||'en';
   const cap=CAPITALS[code];
 
-  /* Country display name: DE hardcoded, EN from table, others via MyMemory */
+  /* Country display name: static dict (DE, AR, ...) where we have one, live
+     MyMemory fallback otherwise, hard fallback to English if that's unavailable
+     too — see _countryDisplayName. */
   const enName=cap.wiki.replace(/_/g,' ');
-  let niceName=uiLang==='de'?(COUNTRY_DE[code]||enName):enName;
+  let niceName=_countryDisplayName(code,uiLang);
   $('country-name').textContent=`${flagEmoji(code)} ${niceName}`;
   $('country-summary').textContent='';
   $('country-link').href=`https://en.wikipedia.org/wiki/${encodeURIComponent(cap.wiki)}`;
@@ -3982,8 +3996,8 @@ async function loadCountryInfo(code){
   $('country-weather').textContent='';
   $('country-applet').style.display='';$('label-country').style.display='';
 
-  /* Translate country name for non-DE/EN */
-  if(uiLang!=='de'&&uiLang!=='en'){
+  /* Live-translate only for languages we don't already have a static dict for */
+  if(uiLang!=='de'&&uiLang!=='en'&&!COUNTRY_NAME_DICTS[uiLang]){
     myMemory(enName,'en',uiLang).then(t=>{
       if(t&&_countryShown===code){
         niceName=t;
