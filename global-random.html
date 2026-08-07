@@ -3867,7 +3867,7 @@ async function loadArtistCard(artistName, countryCode, mbid){
     }catch(e){console.warn('[artistCard] MB url-rels fail:',e.message);}
   }
   /* Try native-language articles in priority order: the CURRENT UI
-     language first, then DE, then EN, then the country's own language —
+     language first, then EN, then DE, then the country's own language —
      deduped so uiLang being 'de' or 'en' doesn't try that language twice.
      Used to be hardcoded DE-then-EN regardless of uiLang, meaning an
      English-mode user still got the German article machine-translated via
@@ -3875,9 +3875,16 @@ async function loadArtistCard(artistName, countryCode, mbid){
      English article was sitting right there unused (confirmed live for
      Welle:Erdball — real, well-written EN article, never reached because
      DE was tried first and won). A native match always beats a translated
-     one, so uiLang has to be tried first, not DE unconditionally. */
+     one, so uiLang has to be tried first, not DE unconditionally.
+     EN before DE (not the other way) for the same reason a non-DE/non-EN
+     user is worse off with German than English when neither is native AND
+     translation isn't available (MyMemory down/quota-exhausted — confirmed
+     live: an Arabic-language visitor got a German bio, unreadable to them
+     either way, when English — the more widely understood second language,
+     and usually the more complete Wikipedia article too — was sitting
+     right there instead). */
   const nativeLang = countryCode ? COUNTRY_LANG[countryCode] : null;
-  const langOrder=[...new Set([uiLang,'de','en',nativeLang].filter(Boolean))];
+  const langOrder=[...new Set([uiLang,'en','de',nativeLang].filter(Boolean))];
   for(const l of langOrder){
     if(data)break;
     data = await fetchWiki(l);
