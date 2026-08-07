@@ -769,7 +769,7 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
     <div id="welcome-pills">
     <svg id="welcome-pill" viewBox="0 0 140 54" xmlns="http://www.w3.org/2000/svg"
          role="button" tabindex="0" aria-label="Take the red pill — enter the site">
-      <title>Erweitere dein Bewusstsein durch neue Erfahrung</title>
+      <title id="welcome-pill-title">Erweitere dein Bewusstsein durch neue Erfahrung</title>
       <defs><clipPath id="pillShape"><rect x="1" y="1" width="138" height="52" rx="26"/></clipPath></defs>
       <g clip-path="url(#pillShape)">
         <rect x="1" y="1" width="69" height="52" fill="#5a0000"/>
@@ -1203,7 +1203,9 @@ const _UI_EN={
   labelDonate:'DONATE',
   lyricsLinkText:'View lyrics',
   moreInfo:'More info',
-  welcomePrivacy:"We don't process any cookies or store any data ourselves — for embedded services like Spotify, this can't be ruled out. By making your choice, you accept this. Imprint:"
+  welcomePrivacy:"We don't process any cookies or store any data ourselves — for embedded services like Spotify, this can't be ruled out. By making your choice, you accept this. Imprint:",
+  pillRedTitle:'Expand your consciousness through a new experience',
+  pillBlueTitle:'Everything stays as it is — go to Spotify'
 };
 const _UI_DE={
   hint:'Für volle Tracks (Desktop): Spotify in einem anderen Tab öffnen und anmelden — kein Pro nötig. Auf dem Handy nur 30s Preview (Spotify-Einschränkung). Firefox: bei anhaltender Preview-Beschränkung erweiterten Trackingschutz für diese Seite deaktivieren.',
@@ -1226,7 +1228,9 @@ const _UI_DE={
   labelDonate:'SPENDEN',
   lyricsLinkText:'Songtext ansehen',
   moreInfo:'Mehr Infos',
-  welcomePrivacy:'Wir selbst verarbeiten keine Cookies oder Speicherdaten — bei eingebundenen Diensten wie Spotify lässt sich das nicht ausschließen. Mit deiner Auswahl akzeptierst du das. Impressum:'
+  welcomePrivacy:'Wir selbst verarbeiten keine Cookies oder Speicherdaten — bei eingebundenen Diensten wie Spotify lässt sich das nicht ausschließen. Mit deiner Auswahl akzeptierst du das. Impressum:',
+  pillRedTitle:'Erweitere dein Bewusstsein durch neue Erfahrung',
+  pillBlueTitle:'Alles bleibt wie es war — geh zu Spotify'
 };
 /* Apply EN immediately so UI isn't blank — async translation happens after myMemory is defined */
 $('hint-text').textContent=_UI_EN.hint;
@@ -1251,6 +1255,8 @@ $('welcome-mobile-hint').textContent=_UI_EN.welcomeMobileHint;
 $('hint-link').textContent=_UI_EN.moreInfo;
 $('hint-link').href='description.html';
 $('welcome-privacy-text').textContent=_UI_EN.welcomePrivacy;
+$('welcome-pill-title').textContent=_UI_EN.pillRedTitle;
+$('welcome-pill-blue-link').title=_UI_EN.pillBlueTitle;
 async function localizeUI(){
   if(BROWSER_LANG==='de'){
     $('hint-text').textContent=_UI_DE.hint;
@@ -1275,6 +1281,8 @@ async function localizeUI(){
     $('hint-link').textContent=_UI_DE.moreInfo;
     $('hint-link').href='beschreibung.html';
     $('welcome-privacy-text').textContent=_UI_DE.welcomePrivacy;
+    $('welcome-pill-title').textContent=_UI_DE.pillRedTitle;
+    $('welcome-pill-blue-link').title=_UI_DE.pillBlueTitle;
   } else if(BROWSER_LANG!=='en'){
     /* These 20 strings never change — caching them in localStorage means
        a RETURNING visitor in the same browser language skips all 20
@@ -1285,15 +1293,15 @@ async function localizeUI(){
        can invalidate old cached translations just by bumping the number
        again — otherwise a stale cached translation of the OLD English
        text would silently stick around forever after an edit here. */
-    const cacheKey=`gr_ui_i18n_v8_${BROWSER_LANG}`; // v8: added llt (lyrics link text) — v7-cached entries would just be missing it
+    const cacheKey=`gr_ui_i18n_v9_${BROWSER_LANG}`; // v9: added prt/pbt (welcome-pill tooltips) — v8-cached entries would just be missing them
     let cached=null;
     try{ cached=JSON.parse(localStorage.getItem(cacheKey)); }catch(_){}
 
-    let hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp;
+    let hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt;
     if(cached){
-      ({hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp}=cached);
+      ({hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt}=cached);
     }else{
-      [hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp]=await Promise.all([
+      [hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt]=await Promise.all([
         myMemory(_UI_EN.hint,'en',BROWSER_LANG),
         myMemory(_UI_EN.giveDesc,'en',BROWSER_LANG),
         myMemory(_UI_EN.giveDonate.replace(' ↗',''),'en',BROWSER_LANG),
@@ -1314,14 +1322,16 @@ async function localizeUI(){
         myMemory(_UI_EN.welcomeStep3,'en',BROWSER_LANG),
         myMemory(_UI_EN.welcomeStep4,'en',BROWSER_LANG),
         myMemory(_UI_EN.welcomeMobileHint,'en',BROWSER_LANG),
-        myMemory(_UI_EN.welcomePrivacy,'en',BROWSER_LANG)
+        myMemory(_UI_EN.welcomePrivacy,'en',BROWSER_LANG),
+        myMemory(_UI_EN.pillRedTitle,'en',BROWSER_LANG),
+        myMemory(_UI_EN.pillBlueTitle,'en',BROWSER_LANG)
       ]);
       /* Only cache if the batch actually mostly succeeded — a session
          where MyMemory was down/rate-limited would otherwise permanently
          cache a wall of nulls for this language, silently showing English
          forever after on every future visit even once the service is
          fine again. */
-      const results={hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp};
+      const results={hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt};
       if(Object.values(results).filter(Boolean).length>=16){
         try{ localStorage.setItem(cacheKey,JSON.stringify(results)); }catch(_){}
       }
@@ -1347,6 +1357,8 @@ async function localizeUI(){
     if(ws4)  $('welcome-step4').textContent=ws4;
     if(wmh)  $('welcome-mobile-hint').textContent=wmh;
     if(wp)   $('welcome-privacy-text').textContent=wp;
+    if(prt)  $('welcome-pill-title').textContent=prt;
+    if(pbt)  $('welcome-pill-blue-link').title=pbt;
     // href stays 'description.html' — English fallback, since only DE/EN pages exist
   }
 }
@@ -4511,7 +4523,13 @@ async function _updateGenreLink(genre){
     extract=(d?.extract||'').slice(0,400);
     qid=qid||d?.wikibase_item||null;
     if(extract&&uiLang!=='en'){
-      const t=await myMemory(extract,'en',uiLang);
+      /* MyMemory's free tier caps requests at 500 bytes URL-encoded — a plain 400-char
+         English extract can already exceed that once spaces/punctuation are %-encoded
+         (confirmed: 400 raw chars of a real Wikipedia extract → 522 encoded bytes), so the
+         translation call silently failed while short strings (UI labels etc.) stayed fine.
+         Trim tighter just for the translation input; the untranslated 400-char extract is
+         still used as-is if this comes back null. */
+      const t=await myMemory(extract.slice(0,300),'en',uiLang);
       if(t) extract=t;
     }
   }
