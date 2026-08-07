@@ -1539,19 +1539,27 @@ function _poolLiveCodes(){
   if(_unknownPool.length>0) codes.push('??');
   return codes;
 }
-function _queueLiveCodes(){
-  const set=new Set();
-  for(const item of queue) set.add(item.countryCode||'??');
-  return [...set];
-}
 /* Generic live-matrix reconciler: diffs `liveCodes` (the current ground
    truth) against whatever's actually in the DOM right now, removes
    slots for codes that dropped out, appends slots (via `appendFn`, i.e.
-   _appendFoundSlot or _appendQueueSlot) for codes that are newly
-   present, and leaves everything else untouched — no full rebuild, no
-   flicker for countries that were already there and still are. Re-adding
-   a code that left and came back gets a fresh pop-in animation for free,
-   since appendFn always creates a brand new element. */
+   _appendFoundSlot) for codes that are newly present, and leaves
+   everything else untouched — no full rebuild, no flicker for countries
+   that were already there and still are. Re-adding a code that left and
+   came back gets a fresh pop-in animation for free, since appendFn
+   always creates a brand new element.
+
+   NOT used for the queue bar (see _syncQueueBar() instead): this
+   dedupes by COUNTRY CODE, one slot per distinct code — correct for
+   IM POOL, where a country's pool can hold many candidates and "is this
+   country represented at all" is the right question. The queue is a
+   different kind of thing: a small, fixed, enumerable list of exactly
+   BUFFER_SIZE upcoming SONGS, not an aggregate — if two of those songs
+   happen to be from the same country, deduping to one flag hid a real
+   queued song from the matrix and made the "IN QUEUE" counter read
+   misleadingly low (confirmed live: multiple '??'/unknown-country picks
+   landing in the queue back to back collapsed to a single '??' bucket,
+   showing "1/3" while all 3 queue slots — and all 3 preview cards —
+   were genuinely full). */
 function _syncLiveBar(barId, liveCodes, appendFn){
   const bar=$(barId);
   if(!bar) return;
@@ -3355,7 +3363,7 @@ function updateFlagBar(){
   _syncLiveBar('found-bar', _poolLiveCodes(), _appendFoundSlot);
   _updatePoolFillBars('found-bar');
   _updateFoundCounter();
-  _syncLiveBar('queue-bar', _queueLiveCodes(), _appendQueueSlot);
+  _syncQueueBar();
   _updatePoolFillBars('queue-bar');
   _updateQueueCounter();
   _updatePoolFillBars('played-bar');
@@ -3501,21 +3509,54 @@ function _foundSlotPct(code){
   return Math.min(stack.length/CAP,1);
 }
 
-/* ── IN QUEUE slot ── Created and removed on demand by _syncLiveBar(),
-   reflecting live membership in the `queue` array (see
-   _queueLiveCodes()) — same "comes and goes" idea as IM POOL, just
-   driven by a different piece of ground truth. Reuses the same
-   .found-slot/.found-slot-enter CSS classes as the other matrices for a
-   consistent look; the fill bar here shows the same thing IM POOL's does
-   — this country's live pool occupancy (candidates.length/CAP) — kept
-   current afterward by _updatePoolFillBars('queue-bar') (see
-   updateFlagBar()). */
-function _appendQueueSlot(code){
+/* ── IN QUEUE slot ── Created and removed on demand by _syncQueueBar(),
+   keyed by the item's stable .slot (0/1/2), NOT by country code like IM
+   POOL is — see the comment above _poolLiveCodes()/_syncLiveBar() for why
+   the queue bar needs its own reconciler instead of reusing that one.
+   Mirrors _syncPreviewSlots() exactly: same BUFFER_SIZE=3 stable slots,
+   same "find whoever currently holds this slot, or treat it as empty"
+   logic, just building a flag chip instead of loading a Spotify preview.
+   Two slots can now legitimately show the same country's flag side by
+   side if the same country got drawn twice — that's the queue's real,
+   current content, not a bug. Reuses the same .found-slot/.found-slot-enter
+   CSS classes as the other matrices for a consistent look; the fill bar
+   here shows the same thing IM POOL's does — this country's live pool
+   occupancy (candidates.length/CAP) — kept current afterward by
+   _updatePoolFillBars('queue-bar') (see updateFlagBar()). */
+function _syncQueueBar(){
+  const bar=$('queue-bar');
+  if(!bar) return;
+  /* Processed in REVERSE (2→0), tracking `anchor` = the DOM node slot i must
+     sit directly before. Starts as the counter badge; each iteration hands
+     the next one its own element as the new anchor. Without this, rebuilding
+     just slot 0 (say) while 1/2 stay untouched would append the fresh
+     element at the END of the bar — same bug _syncPreviewSlots() had to
+     avoid, just for flag chips instead of preview iframes. */
+  let anchor=bar.querySelector('.flag-counter');
+  for(let i=BUFFER_SIZE-1;i>=0;i--){
+    const item=queue.find(q=>q.slot===i);
+    const code=item?(item.countryCode||'??'):null;
+    let slotEl=bar.querySelector(`.found-slot[data-slot="${i}"]`);
+    if(!code){
+      if(slotEl) slotEl.remove();
+      continue; // no element for this slot — anchor stays as whatever came after it
+    }
+    if(slotEl && slotEl.dataset.code===code){
+      if(slotEl.nextSibling!==anchor) bar.insertBefore(slotEl, anchor); // right content, wrong position
+    }else{
+      if(slotEl) slotEl.remove(); // stale: a different country now holds this slot
+      slotEl=_appendQueueSlot(code, i, anchor);
+    }
+    anchor=slotEl;
+  }
+}
+function _appendQueueSlot(code, slotIndex, beforeEl){
   const bar=$('queue-bar');
   if(!bar)return;
   const slot=document.createElement('div');
   slot.className='found-slot found-slot-enter';
   slot.dataset.code=code;
+  slot.dataset.slot=slotIndex;
   const flag=document.createElement('span');
   if(code==='??'){
     flag.innerHTML=`<svg width="1em" height="1em" viewBox="0 0 20 20" style="vertical-align:-0.15em">
@@ -3536,10 +3577,10 @@ function _appendQueueSlot(code){
   fill.style.width=_foundSlotPct(code)*100+'%';
   slot.appendChild(flag);
   slot.appendChild(fill);
-  const existingCounter=bar.querySelector('.flag-counter');
-  if(existingCounter) bar.insertBefore(slot, existingCounter);
+  if(beforeEl) bar.insertBefore(slot, beforeEl);
   else bar.appendChild(slot);
   setTimeout(()=>slot.classList.remove('found-slot-enter'), 600);
+  return slot;
 }
 
 /* ── GESPIELT slot ── The one genuinely append-only matrix of the four:
@@ -3600,15 +3641,14 @@ function _updatePoolFillBars(barId){
   }
 }
 
-/* Live "how many countries are queued RIGHT NOW, waiting their turn" —
-   counts whatever _syncLiveBar() just left in the DOM, same pattern as
-   _updateFoundCounter(). Structurally can never exceed BUFFER_SIZE (3):
-   the live truth this counts from (_queueLiveCodes(), i.e. distinct
-   country codes in `queue`) can't have more entries than `queue` itself
-   has slots, and `queue` is kept at BUFFER_SIZE by promoteFromPool().
-   No more special-case early-removal hack needed to enforce that (see
-   the removed _leaveQueueBar() in the git history) — it just falls out
-   of the live-sync model for free.
+/* Live "how many of the BUFFER_SIZE queue slots are actually filled right
+   now" — counts whatever _syncQueueBar() just left in the DOM. One chip per
+   SLOT (not per distinct country, unlike IM POOL/GESPIELT — see the big
+   comment above _syncQueueBar()), so this is literally the queue's fill
+   level: "3/3" really does mean 3 songs queued, even if two of them share a
+   country. Structurally can never exceed BUFFER_SIZE (3): `queue` itself is
+   kept at that size by promoteFromPool(), and _syncQueueBar() only ever
+   creates one chip per slot index 0..BUFFER_SIZE-1.
 
    Denominator is BUFFER_SIZE (3), NOT COUNTRIES.length+1 like the other
    three badges, for the same reason: this matrix can physically never
@@ -3621,8 +3661,8 @@ function _updateQueueCounter(){
     counter=document.createElement('div');
     counter.className='flag-counter';
     _bindFlagTip(counter, BROWSER_LANG==='de'
-      ? 'Länder, deren Track GERADE in der Warteschlange steht'
-      : 'Countries whose track is currently queued');
+      ? 'Wie viele der 3 Warteschlangen-Plätze gerade belegt sind'
+      : 'How many of the 3 queue slots are currently filled');
     bar.appendChild(counter);
   }
   const liveCount=Array.from(bar.children).filter(el=>el.dataset.code!==undefined).length;
@@ -5353,7 +5393,7 @@ function _queueItem(chosen, tag){
   playDiceSound();
   const code=chosen.code||'??';
   /* No _registerDrawn()/manual matrix move here anymore — IN QUEUE is a
-     live view of `queue` itself (see _queueLiveCodes()), so pushing this
+     live view of `queue` itself (see _syncQueueBar()), so pushing this
      item below is ALL that's needed; the next updateFlagBar() sweep
      picks it up automatically, and IM POOL correctly keeps showing this
      same country too if it still has other candidates waiting. */
