@@ -5564,17 +5564,39 @@ async function _renderWEIntroMeta(){
    (not a per-track guess), sidestep the translate-and-hope approach
    entirely and fetch the verified-correct article for whichever UI
    language is active, no guessing involved. */
-function _weGenreCard(){
-  const isDE = (BROWSER_LANG||'en')==='de';
-  const host = isDE ? 'de' : 'en';
-  const title = isDE ? 'Elektronische Musik' : 'Electronic music';
+async function _weGenreCard(){
+  /* Used to be a hardcoded DE/EN-only shortcut (isDE ? 'de' : 'en') — every OTHER browser
+     language silently fell back to the plain English article, never localized at all. Now
+     goes through the same real-langlinks approach as the normal-track genre card
+     (_updateGenreLink()): "Electronic music" is already the correct English title (no
+     disambiguation-page problem here, unlike the bare "Electronic" MB tag), so this can go
+     straight to a langlink lookup instead of needing the retry step that function has. */
+  const uiLang = BROWSER_LANG||'en';
   $('genre-name').textContent='Electronic';
   $('genre-summary').textContent='';
+  let host='en', title='Electronic music';
+  if(uiLang!=='en'){
+    try{
+      const r=await fetchWithRetry(`https://en.wikipedia.org/w/api.php?action=query&titles=Electronic%20music&prop=langlinks&lllang=${uiLang}&format=json&origin=*`);
+      if(r.ok){
+        const j=await r.json();
+        const nativeTitle=Object.values(j?.query?.pages||{})[0]?.langlinks?.[0]?.['*']||null;
+        if(nativeTitle){ host=uiLang; title=nativeTitle; }
+      }
+    }catch(_){}
+  }
   $('genre-link').href=`https://${host}.wikipedia.org/wiki/${encodeURIComponent(title)}`;
   $('genre-link').textContent='Wikipedia ↗';
-  fetchWithRetry(`https://${host}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
-    .then(r=>r.ok?r.json():null).catch(()=>null)
-    .then(d=>{ if(d?.extract) $('genre-summary').textContent=d.extract.slice(0,400); });
+  const d=await fetchWithRetry(`https://${host}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
+    .then(r=>r.ok?r.json():null).catch(()=>null);
+  let extract=d?.extract?.slice(0,400)||'';
+  /* No native article found via langlinks → translate the English extract itself, same
+     length cap as _updateGenreLink() for the same MyMemory 500-byte-per-request reason. */
+  if(host==='en'&&uiLang!=='en'&&extract){
+    const t=await myMemory(extract.slice(0,300),'en',uiLang);
+    if(t) extract=t;
+  }
+  if(extract) $('genre-summary').textContent=extract;
 }
 
 /* Reveals the lyrics ticker, measuring exact pixel start/end offsets
