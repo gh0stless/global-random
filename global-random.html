@@ -837,14 +837,14 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 <div id="playlist">
   <div class="pl-item" id="pl0"><span class="pl-n">▶</span><span class="pl-word"></span><span class="pl-trans"></span></div>
 </div>
-<div id="track-info">
+<div id="track-info" style="display:none">
   <div id="t-title"></div>
   <div id="t-genre"></div>
   <div id="t-artist"></div>
   <div id="t-meta"></div>
 </div>
 
-<div id="embed-wrapper"><div class="embed-frame"></div></div>
+<div id="embed-wrapper" style="display:none"><div class="embed-frame"></div></div>
 <div id="preview-stack">
   <div class="preview-slot" id="preview-slot-1"><div class="preview-frame"></div></div>
   <div class="preview-slot" id="preview-slot-2"><div class="preview-frame"></div></div>
@@ -5822,6 +5822,14 @@ function _playWEIntro(){
      playback. */
   $('btn').style.display='none';
   $('skip-intro-btn').style.display='';
+  /* track-info/embed-wrapper start hidden (display:none in the markup) so
+     the empty bordered box / dashed placeholder never flashes up in the
+     gap between clicking the welcome pill and this intro's own content
+     actually landing — reported live as a small but real artifact right
+     at splash-dismiss. Shown here, the moment there's real content about
+     to fill them. */
+  $('track-info').style.display='';
+  $('embed-wrapper').style.display='';
   $('embed-wrapper').classList.remove('empty');
   _renderWEIntroMeta();
   /* Snow: hardcoded (see WE_INTRO_SNOW_WORDS above), not translateAll() — this is the very
@@ -6054,8 +6062,28 @@ function handleStop(){
 
 function _startMobileMusic(){
   if(queue.length>0){ mobileFirstPlay(); return; }
+  /* Queue still empty at click time — this is mobile's first real
+     (post-intro) PLAY, so there's no later natural event to hang a retry
+     off, unlike playReady()'s automatic retriggers. The old version polled
+     via setInterval and called mobileFirstPlay() (whose own EC.play() is
+     documented elsewhere as needing to run IN the gesture tick) straight
+     from that timer callback once ready — by then several hundred ms to
+     seconds removed from the actual tap, which several mobile browsers
+     (iOS Safari in particular) no longer honor as a fresh user gesture,
+     silently blocking play(). Wait for the queue WITHOUT auto-playing
+     instead, then hand back a fresh, explicit PLAY button — the next real
+     tap re-enters handleBtn() (still isMobile && count===0, _weIntroDone
+     already true) and calls _startMobileMusic() again, which this time
+     takes the queue.length>0 branch above and calls mobileFirstPlay()
+     synchronously inside THAT tap's own gesture. */
   $('btn').disabled=true; $('btn').textContent='searching…';
-  const p=setInterval(()=>{if(queue.length>0){clearInterval(p);mobileFirstPlay();}},300);
+  const p=setInterval(()=>{
+    if(queue.length>0){
+      clearInterval(p);
+      $('btn').disabled=false; $('btn').textContent='▶  PLAY';
+      $('btn').classList.add('btn-attention');
+    }
+  },300);
 }
 
 /* Second layer of randomness: rather than always playing the oldest of
