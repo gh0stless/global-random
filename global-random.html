@@ -3882,6 +3882,29 @@ async function loadArtistCard(artistName, countryCode, mbid){
     if(data)break;
     data = await fetchWiki(l);
   }
+  /* Native match still beats a translated one when the settled-for language differs from
+     uiLang — but only worth checking if we actually found something via the LITERAL-name
+     search above (data.srcLang is one of langOrder's own languages, not the MB-curated link
+     from step 0, which is already the most authoritative source and shouldn't be
+     second-guessed here). A literal-name miss in uiLang doesn't always mean no article
+     exists there — it can just be under a different spelling/transliteration (Cyrillic,
+     Arabic script, etc.). Real Wikipedia langlinks off the article we DID find check that
+     directly, no translation-guessing involved (see the identical fix for genre articles).
+     fetchWiki()'s own verifyMusicianQid() check still runs on whatever this finds, so a
+     coincidental wrong match is caught exactly like every other source here. */
+  if(data && data.srcLang!==uiLang && langOrder.includes(data.srcLang)){
+    try{
+      const r=await fetchWithRetry(`https://${data.srcLang}.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(artistName)}&prop=langlinks&lllang=${uiLang}&format=json&origin=*`);
+      if(r.ok){
+        const j=await r.json();
+        const nativeTitle=Object.values(j?.query?.pages||{})[0]?.langlinks?.[0]?.['*']||null;
+        if(nativeTitle){
+          const nativeData=await fetchWiki(uiLang,nativeTitle);
+          if(nativeData) data=nativeData;
+        }
+      }
+    }catch(_){}
+  }
   /* Translate bio to uiLang regardless of source */
   if(data && data.srcLang && data.srcLang!==uiLang && data.bio){
     const tr = await myMemory(data.bio, data.srcLang, uiLang);
