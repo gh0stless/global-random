@@ -3146,9 +3146,15 @@ function spawnBubble(word,color,sizeBoost=0,lang=''){
   el.className='bubble';
   const langName=lang?LANG_NAMES[lang]||'':'';
   el.innerHTML=`<span class="bw">${word}</span>${langName?`<span class="bl">(${langName})</span>`:''}`;
-  /* Fewer = bigger: base size larger on mobile */
+  /* Fewer = bigger: base size larger on mobile. Long strings (full track titles run
+     through translateAll(), not just single buzzwords - some translations run 30-40+
+     characters, e.g. Cyrillic/Devanagari titles with a " - Inst." suffix) get scaled
+     down past ~10 characters so a long title doesn't render at the same huge size as a
+     short word and swamp the screen with itself - overlapping illegible text otherwise,
+     confirmed live. Floored so nothing gets small enough to be unreadable either. */
   const base=isMobile?1.1:1.6;
-  const sz=base+sizeBoost+Math.random()*(isMobile?0.9:1.4);
+  const lenPenalty=Math.max(0,(word.length-10)*0.035);
+  const sz=Math.max(0.75, base+sizeBoost+Math.random()*(isMobile?0.9:1.4)-lenPenalty);
   const dur=36+Math.random()*8;
   el.style.cssText=`left:${Math.random()*93}%;top:${-5-Math.random()*10}%;font-size:${sz}em;color:${color};font-weight:bold;animation-duration:${dur}s;animation-delay:${Math.random()*0.8}s;opacity:0;`;
   bl.appendChild(el);
