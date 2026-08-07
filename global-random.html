@@ -4121,18 +4121,9 @@ function updatePlaylist(){
      random draw left to second-guess it. */
   const _s0=playingItem||null;
   if(_s0){
-    p0.querySelector('.pl-word').textContent=_s0.word||'';
-    p0.querySelector('.pl-word').style.color=_s0.color||'var(--text)';
-    /* Same shrink-to-fit as .pl-trans just below — was ellipsis-only
-       before, which for a long title just chopped it off mid-word rather
-       than showing the whole thing smaller. Same thresholds as .pl-trans
-       for consistency, measured on the title itself (single line, unlike
-       trans's two-line split). */
     const wordEl=p0.querySelector('.pl-word');
-    wordEl.classList.remove('pl-word-long','pl-word-xlong');
-    const _titleLen=(_s0.word||'').length;
-    if(_titleLen>45) wordEl.classList.add('pl-word-xlong');
-    else if(_titleLen>25) wordEl.classList.add('pl-word-long');
+    wordEl.textContent=_s0.word||'';
+    wordEl.style.color=_s0.color||'var(--text)';
     /* Split EN · DE → two lines via <br> */
     const _t0=_s0.trans||_s0.info||'';
     const transEl=p0.querySelector('.pl-trans');
@@ -4144,6 +4135,27 @@ function updatePlaylist(){
     transEl.classList.remove('pl-trans-long','pl-trans-xlong');
     if(_longestLine>45) transEl.classList.add('pl-trans-xlong');
     else if(_longestLine>25) transEl.classList.add('pl-trans-long');
+    /* Shrink-to-fit for the title — MUST run after .pl-trans above already
+       has its real final content: .pl-word (flex:1) and .pl-trans
+       (flex-shrink:0, up to 50% width) share one flex row, so how much
+       room is actually left for the title depends on how wide .pl-trans's
+       CURRENT text is. Checking title overflow before updating .pl-trans
+       would measure against the PREVIOUS track's leftover width.
+       Real scrollWidth>clientWidth check instead of a character-count
+       guess (what this used to be): a char threshold has no way to know
+       how much room the sibling actually leaves, which is exactly why a
+       short title like "Shades Of Gray" (14 chars, nowhere near the old
+       25-char cutoff) still ellipsis-truncated in practice — confirmed
+       live via screenshot. Ellipsis (see .pl-word CSS) stays on as a
+       last-resort safety net if even the smallest step still overflows. */
+    wordEl.classList.remove('pl-word-long','pl-word-xlong');
+    if(wordEl.scrollWidth>wordEl.clientWidth){
+      wordEl.classList.add('pl-word-long');
+      if(wordEl.scrollWidth>wordEl.clientWidth){
+        wordEl.classList.remove('pl-word-long');
+        wordEl.classList.add('pl-word-xlong');
+      }
+    }
     p0.className='pl-item active';
   }else if(queue.length>0){
     p0.querySelector('.pl-word').textContent=BROWSER_LANG==='de'
