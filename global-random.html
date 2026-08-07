@@ -1390,6 +1390,17 @@ let _queueRefillTimer=null;
 const queue=[];
 let EC=null, currentId=null, playingItem=null, engineRunning=false;
 let _userStopped=false; // true after STOP is pressed — blocks the heartbeat's auto-restart until the next PLAY click
+/* Defense-in-depth re-entrancy guard for playReady()/mobileFirstPlay() — held
+   from the moment a real track-transition pick starts until EC.play() has
+   actually resolved (see both functions' own use). Not strictly needed today:
+   the PLAY NEXT button is already kept disabled through the exact same window
+   (see updateBtn()'s call site inside waitForTrackEnd()), and every automatic
+   re-trigger already checks currentId before calling in. This exists purely
+   so that a FUTURE caller of either function that forgets one of those two
+   safeguards still can't cause an overlapping double-pick/double-dice-sound —
+   cheap to hold, and there's no legitimate reason two transitions should ever
+   genuinely run concurrently. */
+let _transitioning=false;
 let count=0, lastReq=0, autoTimer=null, countdownInterval=null, wakeLock=null;
 let _pressPlayLine=null, _pressPlayWatchdog=null; // see updateBtn()/handleBtn() — pulsing "PRESS PLAY ON SCREEN" + 30s autostart
 
@@ -5285,7 +5296,36 @@ setInterval(()=>{
   if(_userStopped) return; // STOP was pressed — wait for the next explicit PLAY click
   if(!engineRunning && !allCountriesCapped()) discoverCandidates();
   if(queue.length<BUFFER_SIZE && candidates.length>0) promoteFromPool();
+  _checkQueueConsistency();
 }, 10000);
+
+/* Piggybacks on the heartbeat above to catch queue/DOM desyncs proactively
+   instead of waiting for someone to notice a wrong flag count in a
+   screenshot (see the IN QUEUE flag-counter bug fixed earlier this
+   session — this would have surfaced that one in the console immediately).
+   Diagnostic only: logs a warning, never touches state itself. Skipped
+   mid-transition (_transitioning true) since queue/DOM are expected to be
+   briefly out of step for the ~1-3s between the splice and the preview/
+   flag-bar resync that follows it — a real bug looks like this mismatch
+   PERSISTING across multiple 10s ticks, not appearing once. */
+function _checkQueueConsistency(){
+  if(_transitioning) return;
+  let filledPreview=0;
+  for(let i=1;i<=3;i++){
+    const el=$('preview-slot-'+i);
+    if(el && !el.classList.contains('empty')) filledPreview++;
+  }
+  if(filledPreview!==queue.length){
+    console.warn(`[consistency] queue.length=${queue.length} but ${filledPreview}/3 preview slots are non-empty`);
+  }
+  const bar=$('queue-bar');
+  if(bar){
+    const chips=Array.from(bar.children).filter(el=>el.dataset.code!==undefined).length;
+    if(chips!==queue.length){
+      console.warn(`[consistency] queue.length=${queue.length} but queue-bar shows ${chips} flag chip(s)`);
+    }
+  }
+}
 
 /* Simple running clock since first play — no accumulation, no pause
    tracking, just elapsed wall-clock time from the moment listening
@@ -6170,6 +6210,8 @@ function _pickRandomFromQueue(){
 
 function mobileFirstPlay(){
   if(!queue.length||!EC)return;
+  if(_transitioning)return; // see its own declaration
+  _transitioning=true; // this function is fully synchronous, so cleared at its own end below
   _showWEBanner(false); // search phase over, same as desktop playReady()
   /* Undo the intro-skip empty-queue fallback's track-info-empty class (see
      finish() in _playWEIntro()) — this is the mobile path that can follow
@@ -6216,6 +6258,7 @@ function mobileFirstPlay(){
   loadMeta(item);
   searchEngine();
   if(queue.length>0)updateBtn();
+  _transitioning=false;
 }
 
 /* ── Wait for track to end — works for preview AND full tracks ── */
@@ -6392,6 +6435,12 @@ function playReady(){
     _trackEndAt=Date.now();
     return;
   }
+  /* See _transitioning's own declaration — checked here (after the guards
+     above, which should always win independently) but before the jingle
+     branch below, since that branch legitimately re-enters playReady() via
+     its own promise callback once the jingle finishes and must NOT find
+     itself locked out by a flag its own earlier pass never got to clear. */
+  if(_transitioning)return;
   /* Station jingle: every 10-20 REAL minutes (randomized delay, re-rolled
      each time — see _rollNextJingleDelay()'s own comment for why this is
      time-based, not track-count-based), fires here rather than being
@@ -6415,6 +6464,7 @@ function playReady(){
       return;
     }
   }
+  _transitioning=true; // cleared once EC.play() has actually resolved, at the end of the async IIFE below
   _showWEBanner(false); // search/intro phase is over once real playback starts
   clearTimeout(autoTimer);clearInterval(countdownInterval);
   /* Mark the main player empty RIGHT NOW, before anything else — mirrors
@@ -6531,6 +6581,7 @@ function playReady(){
                           // real one was competing for network/main-thread
                           // time right when it mattered most (audible delay
                           // between dice sound and actual track sound)
+    _transitioning=false; // see its own declaration — this transition has now genuinely settled
   })();
   /* Clear the previous track's title/genre/artist right now, same as
      mobileFirstPlay() already does — without this, they sat frozen on
