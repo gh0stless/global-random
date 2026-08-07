@@ -522,6 +522,13 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
   height:88px;            /* fixed: title + genre + artist + meta */
   margin-bottom:16px;overflow:hidden;flex-shrink:0
 }
+/* Border-only toggle, not display:none on the whole element — the box
+   above is deliberately fixed-height so nothing else ever jumps around it;
+   hiding/showing the whole container would reintroduce exactly that jump
+   the moment real content lands. This just makes the border-left (visible
+   regardless of whether t-title/t-genre/etc. actually have text) invisible
+   until there's something to show, same reserved space throughout. */
+#track-info.track-info-empty{border-left-color:transparent}
 #t-title {font-size:clamp(.88em,3.5vw,1.05em);color:var(--text);
   margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #t-genre{font-size:clamp(.46em,1.8vw,.54em);color:var(--accent2,#00e5ff);
@@ -837,14 +844,14 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 <div id="playlist">
   <div class="pl-item" id="pl0"><span class="pl-n">▶</span><span class="pl-word"></span><span class="pl-trans"></span></div>
 </div>
-<div id="track-info" style="display:none">
+<div id="track-info" class="track-info-empty">
   <div id="t-title"></div>
   <div id="t-genre"></div>
   <div id="t-artist"></div>
   <div id="t-meta"></div>
 </div>
 
-<div id="embed-wrapper" style="display:none"><div class="embed-frame"></div></div>
+<div id="embed-wrapper"><div class="embed-frame"></div></div>
 <div id="preview-stack">
   <div class="preview-slot" id="preview-slot-1"><div class="preview-frame"></div></div>
   <div class="preview-slot" id="preview-slot-2"><div class="preview-frame"></div></div>
@@ -5822,14 +5829,16 @@ function _playWEIntro(){
      playback. */
   $('btn').style.display='none';
   $('skip-intro-btn').style.display='';
-  /* track-info/embed-wrapper start hidden (display:none in the markup) so
-     the empty bordered box / dashed placeholder never flashes up in the
-     gap between clicking the welcome pill and this intro's own content
-     actually landing — reported live as a small but real artifact right
-     at splash-dismiss. Shown here, the moment there's real content about
-     to fill them. */
-  $('track-info').style.display='';
-  $('embed-wrapper').style.display='';
+  /* #track-info starts with the track-info-empty class (border-left
+     invisible, see its own CSS comment) so the bare border never flashes
+     up in the gap between clicking the welcome pill and this intro's own
+     content actually landing — reported live as a small but real artifact
+     right at splash-dismiss. Removed here, the moment there's real content
+     about to fill it. #embed-wrapper needs no equivalent: its base style
+     already has no border/background at all until .empty is explicitly
+     added (which nothing does before this point), so it was already just
+     blank space during that same gap. */
+  $('track-info').classList.remove('track-info-empty');
   $('embed-wrapper').classList.remove('empty');
   _renderWEIntroMeta();
   /* Snow: hardcoded (see WE_INTRO_SNOW_WORDS above), not translateAll() — this is the very
@@ -5939,19 +5948,17 @@ function _playWEIntro(){
       _showWEBanner(false);
       _hideAllInfoCards();
       /* Clearing the text isn't enough by itself — #track-info's border-left
-         and #embed-wrapper's .empty placeholder styling both render
-         unconditionally regardless of content, so an empty #track-info still
-         shows its purple left-bar and an empty #embed-wrapper still shows its
-         dashed purple placeholder box. Fine as a BRIEF transitional look
-         between two real tracks (playReady()'s normal case), but this
-         fallback can leave nothing playing for a genuinely long stretch —
-         reported live as two lingering purple artifacts. Hidden outright
-         here instead, restored in playReady()/mobileFirstPlay() once a real
-         track actually starts (both are reachable next: playReady() on
-         desktop and via a later manual click on mobile, mobileFirstPlay()
-         specifically once handleBtn() routes into _startMobileMusic()). */
-      $('track-info').style.display='none';
-      $('embed-wrapper').style.display='none';
+         renders unconditionally regardless of content, so an empty
+         #track-info still showed its purple left-bar the whole time nothing
+         was playing (reported live). track-info-empty makes just the border
+         invisible, same reserved layout space throughout — no jump when it
+         comes back. #embed-wrapper doesn't need the same treatment: adding
+         .empty here is the same dashed "something will load here soon" look
+         it already shows between two real tracks, which is an honest,
+         correct signal for "still searching", not an artifact — it's the
+         W:E content sitting frozen behind it (now cleared above) that made
+         it read as stuck. */
+      $('track-info').classList.add('track-info-empty');
       $('embed-wrapper').classList.add('empty');
       $('t-title').textContent='';$('t-artist').textContent='';
       $('t-genre').textContent='';$('t-meta').textContent='';
@@ -6164,12 +6171,11 @@ function _pickRandomFromQueue(){
 function mobileFirstPlay(){
   if(!queue.length||!EC)return;
   _showWEBanner(false); // search phase over, same as desktop playReady()
-  /* Undo the intro-skip empty-queue fallback's outright display:none on
-     these two (see finish() in _playWEIntro()) — this is the mobile path
-     that can follow it (handleBtn() -> _startMobileMusic() -> here) once a
-     real track is actually ready. No-op if they were never hidden. */
-  $('track-info').style.display='';
-  $('embed-wrapper').style.display='';
+  /* Undo the intro-skip empty-queue fallback's track-info-empty class (see
+     finish() in _playWEIntro()) — this is the mobile path that can follow
+     it (handleBtn() -> _startMobileMusic() -> here) once a real track is
+     actually ready. No-op if it was never added. */
+  $('track-info').classList.remove('track-info-empty');
   stopSearchTune(); // stop loop AND audio
   playDiceSound();
   const item=_pickRandomFromQueue();
@@ -6423,13 +6429,12 @@ function playReady(){
      transition can start (natural end, manual PLAY NEXT click, the
      Spotify-stall-recovery auto-resume), so putting it here covers all of
      them at once instead of duplicating the same line at each call site. */
-  /* Undo the intro-skip empty-queue fallback's outright display:none on
-     these two (see finish() in _playWEIntro()) — this is the desktop path
-     that follows it once a real track is actually ready. No-op (setting ''
-     when it's already '') on every OTHER call, i.e. every normal
-     track-to-track transition that never went through that fallback. */
-  $('track-info').style.display='';
-  $('embed-wrapper').style.display='';
+  /* Undo the intro-skip empty-queue fallback's track-info-empty class (see
+     finish() in _playWEIntro()) — this is the general choke point every
+     real track transition passes through, including the one that follows
+     that fallback. No-op on every OTHER call, i.e. every normal
+     track-to-track transition that never went through it. */
+  $('track-info').classList.remove('track-info-empty');
   $('embed-wrapper').classList.add('empty');
   _hideAllInfoCards();
   stopSearchTune(); // stop loop AND audio — must happen BEFORE playDiceSound(),
