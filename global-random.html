@@ -5930,6 +5930,20 @@ function _playWEIntro(){
          SAM sample below, not after — no reason to delay it. */
       _showWEBanner(false);
       _hideAllInfoCards();
+      /* Clearing the text isn't enough by itself — #track-info's border-left
+         and #embed-wrapper's .empty placeholder styling both render
+         unconditionally regardless of content, so an empty #track-info still
+         shows its purple left-bar and an empty #embed-wrapper still shows its
+         dashed purple placeholder box. Fine as a BRIEF transitional look
+         between two real tracks (playReady()'s normal case), but this
+         fallback can leave nothing playing for a genuinely long stretch —
+         reported live as two lingering purple artifacts. Hidden outright
+         here instead, restored in playReady()/mobileFirstPlay() once a real
+         track actually starts (both are reachable next: playReady() on
+         desktop and via a later manual click on mobile, mobileFirstPlay()
+         specifically once handleBtn() routes into _startMobileMusic()). */
+      $('track-info').style.display='none';
+      $('embed-wrapper').style.display='none';
       $('embed-wrapper').classList.add('empty');
       $('t-title').textContent='';$('t-artist').textContent='';
       $('t-genre').textContent='';$('t-meta').textContent='';
@@ -6122,6 +6136,12 @@ function _pickRandomFromQueue(){
 function mobileFirstPlay(){
   if(!queue.length||!EC)return;
   _showWEBanner(false); // search phase over, same as desktop playReady()
+  /* Undo the intro-skip empty-queue fallback's outright display:none on
+     these two (see finish() in _playWEIntro()) — this is the mobile path
+     that can follow it (handleBtn() -> _startMobileMusic() -> here) once a
+     real track is actually ready. No-op if they were never hidden. */
+  $('track-info').style.display='';
+  $('embed-wrapper').style.display='';
   stopSearchTune(); // stop loop AND audio
   playDiceSound();
   const item=_pickRandomFromQueue();
@@ -6375,6 +6395,13 @@ function playReady(){
      transition can start (natural end, manual PLAY NEXT click, the
      Spotify-stall-recovery auto-resume), so putting it here covers all of
      them at once instead of duplicating the same line at each call site. */
+  /* Undo the intro-skip empty-queue fallback's outright display:none on
+     these two (see finish() in _playWEIntro()) — this is the desktop path
+     that follows it once a real track is actually ready. No-op (setting ''
+     when it's already '') on every OTHER call, i.e. every normal
+     track-to-track transition that never went through that fallback. */
+  $('track-info').style.display='';
+  $('embed-wrapper').style.display='';
   $('embed-wrapper').classList.add('empty');
   _hideAllInfoCards();
   stopSearchTune(); // stop loop AND audio — must happen BEFORE playDiceSound(),
