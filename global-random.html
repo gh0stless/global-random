@@ -5643,6 +5643,107 @@ function _showLyricsTicker(){
   track.classList.add('we-scroll-active');
 }
 
+/* Hardcoded snow-bubble words for the W:E intro, one entry per snow language (same
+   84-language set as TRANSLATE_TO, minus 'ha'/'dz' - see below). This is a one-off fixed piece
+   of content (same track, same text, every session) so a static table beats a live translateAll()
+   call: zero quota risk, zero chance of the intro silently showing no snow because MyMemory was
+   down. Sourced from 'Radio Wellenlänge Erdball' via MyMemory (fetching WITH 'Radio' gives far
+   safer context resolution than the bare phrase would - 'Welle'/wave alone drifts to sea-wave in
+   French/Spanish, and 'Frequenz' alone drifts to "how often" in several other languages; see the
+   test2.html comparison this was built from), then the translated "Radio" word was stripped
+   from each result by hand, hand-reviewed against real vocabulary per language, and a few actual
+   MT errors fixed (ru/uk/bg/lt had literally just repeated their "radio wave" translation,
+   missing the "length" concept entirely; fil drifted to "storm surge"; rw had a duplicated-word
+   glitch). ha excluded: MyMemory returns garbage for it regardless of input text. dz excluded:
+   never got a verifiable, complete translation across any phrase tested. */
+const WE_INTRO_SNOW_WORDS=[
+  {word:'Wellenlänge Erdball',color:'#ff79c6',lang:'de'},
+  {word:'波长地球仪',color:'#ef4444',lang:'zh'},
+  {word:'波長地球儀',color:'#0284c7',lang:'ja'},
+  {word:'파장 지구본',color:'#16a34a',lang:'ko'},
+  {word:'तरंगदैर्ध्य ग्लोब',color:'#ca8a04',lang:'hi'},
+  {word:'তরঙ্গদৈর্ঘ্য গ্লোব',color:'#d97706',lang:'bn'},
+  {word:'Bước Sóng Địa Cầu',color:'#15803d',lang:'vi'},
+  {word:'ลูกโลกความยาวคลื่น',color:'#a21caf',lang:'th'},
+  {word:'Panjang Gelombang Dunia',color:'#166534',lang:'id'},
+  {word:'Panjang Gelombang Dunia',color:'#065f46',lang:'ms'},
+  {word:'Wavelength Globe',color:'#0891b2',lang:'tl'},
+  {word:'Долгионы глоб',color:'#1d4ed8',lang:'mn'},
+  {word:'तरंगदैर्ध्य ग्लोब',color:'#ea580c',lang:'ne'},
+  {word:'ਤਰੰਗ-ਲੰਬਾਈ ਗਲੋਬ',color:'#c026d3',lang:'pa'},
+  {word:'તરંગલંબાઇ ગ્લોબ',color:'#0369a1',lang:'gu'},
+  {word:'அலைநீளம் குளோப்',color:'#7c2d12',lang:'ta'},
+  {word:'తరంగదైర్ఘ్యం గ్లోబ్',color:'#854d0e',lang:'te'},
+  {word:'तरंगलांबी ग्लोब',color:'#0f766e',lang:'mr'},
+  {word:'طول موج گلوب',color:'#6d28d9',lang:'ur'},
+  {word:'كرة الطول الموجي',color:'#d97706',lang:'ar'},
+  {word:'طول موج کره زمین',color:'#7c2d12',lang:'fa'},
+  {word:'גלובוס אורך גל',color:'#0f766e',lang:'he'},
+  {word:'Dalga Boyu Küre',color:'#b45309',lang:'tr'},
+  {word:'Dalğa Uzunluğu Qlobusu',color:'#ef4444',lang:'az'},
+  {word:'толқын ұзындығы глобус',color:'#0284c7',lang:'kk'},
+  {word:'Ալիքի Գլոբուս',color:'#7c3aed',lang:'hy'},
+  {word:'ტალღის სიგრძე გლობუსი',color:'#c026d3',lang:'ka'},
+  {word:'longueur d\'onde globe terrestre',color:'#7c3aed',lang:'fr'},
+  {word:'Globo de Longitud de Onda',color:'#ea580c',lang:'es'},
+  {word:'Globo de comprimento de onda',color:'#059669',lang:'pt'},
+  {word:'lunghezza d\'onda globo terrestre',color:'#db2777',lang:'it'},
+  {word:'Glob cu lungime de undă',color:'#b91c1c',lang:'ro'},
+  {word:'Globus de Longitud d\'Ona',color:'#1d4ed8',lang:'ca'},
+  {word:'Longèdonn Globe',color:'#6d28d9',lang:'ht'},
+  {word:'golflengte aardbol',color:'#6d28d9',lang:'nl'},
+  {word:'Våglängdsglob',color:'#0369a1',lang:'sv'},
+  {word:'Bølgelengdeglobus',color:'#1e40af',lang:'no'},
+  {word:'Bølgelængdeglobus',color:'#854d0e',lang:'da'},
+  {word:'Bylgjulengdarhnöttur',color:'#0f766e',lang:'is'},
+  {word:'Golflengte Aardbol',color:'#059669',lang:'af'},
+  {word:'Глобус длины волны',color:'#c026d3',lang:'ru'},
+  {word:'Globus o długości fali',color:'#b91c1c',lang:'pl'},
+  {word:'Koule vlnové délky',color:'#1d4ed8',lang:'cs'},
+  {word:'Zemeguľa vlnovej dĺžky',color:'#0369a1',lang:'sk'},
+  {word:'Глобус довжини хвилі',color:'#854d0e',lang:'uk'},
+  {word:'Глобус на дължина на вълна',color:'#1e3a5f',lang:'bg'},
+  {word:'Valna duljina globusa',color:'#ef4444',lang:'hr'},
+  {word:'Globus talasne dužine',color:'#ca8a04',lang:'sr'},
+  {word:'Valovna dolžina globusa',color:'#16a34a',lang:'sl'},
+  {word:'Глобус со бранова должина',color:'#a21caf',lang:'mk'},
+  {word:'Σφαίρα μήκους κυμάτων',color:'#1e40af',lang:'el'},
+  {word:'Hullámhossz-gömb',color:'#b45309',lang:'hu'},
+  {word:'Aallonpituuspallo',color:'#059669',lang:'fi'},
+  {word:'lainepikkuse gloobus',color:'#0284c7',lang:'et'},
+  {word:'viļņu garuma globuss',color:'#c026d3',lang:'lv'},
+  {word:'Bangos ilgio gaublys',color:'#7c3aed',lang:'lt'},
+  {word:'Globi i gjatësisë së valës',color:'#0891b2',lang:'sq'},
+  {word:'Lurraren uhin-luzera',color:'#7c2d12',lang:'eu'},
+  {word:'Globu tat-Tul tal-Mewġa',color:'#1d4ed8',lang:'mt'},
+  {word:'Cruinneog Thonnfhad',color:'#16a34a',lang:'ga'},
+  {word:'Glôb Tonfedd',color:'#0f766e',lang:'cy'},
+  {word:'כוואַליע ערד',color:'#d97706',lang:'yi'},
+  {word:'Globu ya Wimbi',color:'#065f46',lang:'sw'},
+  {word:'Wavelength Globe',color:'#ca8a04',lang:'yo'},
+  {word:'Wavelength Globe',color:'#d97706',lang:'ig'},
+  {word:'ሞገድ ግሎብ',color:'#b45309',lang:'am'},
+  {word:'Mowjadaha Globe',color:'#0891b2',lang:'so'},
+  {word:'I-Wavelength Globe',color:'#059669',lang:'zu'},
+  {word:'I-Wavelength Globe',color:'#0f766e',lang:'xh'},
+  {word:'Глобус даўжыні хвалі',color:'#7c3aed',lang:'be'},
+  {word:'Globus talasne dužine',color:'#0891b2',lang:'bs'},
+  {word:'Haba ng Alon ng Daigdig',color:'#0284c7',lang:'fil'},
+  {word:'សកលរលក',color:'#c026d3',lang:'km'},
+  {word:'Толкун узундугу глобус',color:'#16a34a',lang:'ky'},
+  {word:'ຄວາມຍາວຄື້ນໂລກ',color:'#d97706',lang:'lo'},
+  {word:'Halavan\'ny Onjan\'ny Tany',color:'#059669',lang:'mg'},
+  {word:'လှိုင်းအလျား ကမ္ဘာလုံး',color:'#1d4ed8',lang:'my'},
+  {word:'موج ګلوب',color:'#7c2d12',lang:'ps'},
+  {word:'Urusobe rw\'umuvuduko',color:'#0f766e',lang:'rw'},
+  {word:'තරංග ආයාම ග්ලෝබ්',color:'#ca8a04',lang:'si'},
+  {word:'Дарозии мавҷ глобуси',color:'#b91c1c',lang:'tg'},
+  {word:'ሞገድ ግሎብ',color:'#1e40af',lang:'ti'},
+  {word:'Dünýäniň tolkun uzynlygy',color:'#065f46',lang:'tk'},
+  {word:'Yerning to\'lqin uzunligi',color:'#0891b2',lang:'uz'},
+  {word:'Longitudo Undae Orbis',color:'#78350f',lang:'la'}
+];
+
 function _playWEIntro(){
   _weIntroPlaying=true;
   /* The ambient search tune is already silent by the time this runs —
@@ -5655,6 +5756,12 @@ function _playWEIntro(){
   $('skip-intro-btn').style.display='';
   $('embed-wrapper').classList.remove('empty');
   _renderWEIntroMeta();
+  /* Snow: hardcoded (see WE_INTRO_SNOW_WORDS above), not translateAll() — this is the very
+     first thing that plays in a session, so there's no live-track snow data to preserve or
+     clobber here. */
+  snowStarted=true;
+  setSnowWords(WE_INTRO_SNOW_WORDS);
+  startSnow();
   term('HALLO, HIER SPRICHT WELLE:ERDBALL...');
   /* Lyrics ticker: a fixed 20s-after-click timer, deliberately NOT synced
      to the track's own reported position. An earlier version tried

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>GLOBAL RANDOM — W:E Snow-Phrase Comparison</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#111;color:#eee;max-width:1100px;margin:20px auto;padding:0 16px}
+  h1{font-size:1.2rem}
+  button{font-size:1rem;padding:8px 16px;margin:8px 8px 8px 0;background:#2a6;color:#fff;border:none;border-radius:4px;cursor:pointer}
+  button:disabled{background:#555;cursor:not-allowed}
+  #stopBtn{background:#a33}
+  #progress{margin:12px 0;font-family:monospace}
+  #bar{height:10px;background:#333;border-radius:5px;overflow:hidden;margin:4px 0}
+  #barFill{height:100%;background:#2a6;width:0%;transition:width .2s}
+  #log{height:150px;overflow-y:auto;background:#000;color:#9f9;font-family:monospace;font-size:.75rem;padding:8px;border-radius:4px;white-space:pre-wrap;margin-bottom:16px}
+  .warn{color:#fa3}
+  .err{color:#f66}
+  table{border-collapse:collapse;width:100%;font-size:.85rem}
+  th,td{border:1px solid #444;padding:4px 8px;text-align:left;vertical-align:top}
+  th{background:#222;position:sticky;top:0}
+  tr:nth-child(even){background:#1a1a1a}
+  td.lang{color:#888;font-family:monospace;white-space:nowrap}
+  .diverge{background:#3a2a00}
+  textarea{width:100%;height:150px;font-family:monospace;font-size:.75rem;background:#222;color:#eee;border:1px solid #555;border-radius:4px;padding:8px;box-sizing:border-box;margin-top:16px}
+</style>
+</head>
+<body>
+<h1>GLOBAL RANDOM — W:E Snow-Phrase Comparison (Test Tool)</h1>
+<p>Vergleicht vier Phrasenvarianten ("Radio Welle Erdball" / "Welle Erdball" / "Frequenz Erdball" / "Radio Wellenl&auml;nge Erdball", Quelle: Deutsch) &uuml;bersetzt in alle 86 Snow-Zielsprachen &mdash; um zu sehen, welche Variante zuverl&auml;ssig bei der Funkwellen-Bedeutung bleibt statt zu Meereswelle oder H&auml;ufigkeit/Wiederholung abzudriften. "Radio Wellenl&auml;nge Erdball" wird bewusst MIT "Radio" abgefragt (f&uuml;r saubere Kontextaufl&ouml;sung) &mdash; das &uuml;bersetzte "Radio"-Wort wird danach manuell aus dem Ergebnis gestrichen, um ein bandnamen-&auml;hnliches Endergebnis zu bekommen. L&auml;uft rein im Browser. Fortschritt wird pro Phrase in localStorage gecacht &mdash; bei Quota-Stop einfach sp&auml;ter "Start" erneut dr&uuml;cken.</p>
+
+<div>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn" disabled>Stop</button>
+  <button id="resetBtn">Reset (alle Caches verwerfen)</button>
+  <button id="copyBtn">Ergebnis als JSON kopieren</button>
+</div>
+
+<div id="progress">0 / 0</div>
+<div id="bar"><div id="barFill"></div></div>
+<div id="log"></div>
+
+<table id="resultTable">
+  <thead>
+    <tr id="resultHead"><th>Sprache</th></tr>
+  </thead>
+  <tbody id="resultBody"></tbody>
+</table>
+
+<textarea id="out" readonly></textarea>
+
+<script>
+const PHRASES = ['Radio Welle Erdball','Welle Erdball','Frequenz Erdball','Radio Wellenlänge Erdball'];
+const SRC_LANG = 'de';
+
+/* Same 87 target languages as TRANSLATE_TO in global-random.html, minus 'de' itself —
+   source is German, and translateAll() in the real app filters the source language out
+   of its own target list for exactly this reason: de->de is meaningless and MyMemory
+   errors on it ("PLEASE SELECT TWO DISTINCT LANGUAGES"), which was aborting the whole run. */
+const LANGS = ["zh","ja","ko","hi","bn","vi","th","id","ms","tl","mn","ne","pa","gu","ta","te","mr","ur","ar","fa","he","tr","az","kk","hy","ka","fr","es","pt","it","ro","ca","ht","nl","sv","no","da","is","af","ru","pl","cs","sk","uk","bg","hr","sr","sl","mk","el","hu","fi","et","lv","lt","sq","eu","mt","ga","cy","yi","sw","ha","yo","ig","am","so","zu","xh","be","bs","dz","fil","km","ky","lo","mg","my","ps","rw","si","tg","ti","tk","uz","la"].filter(l=>l!==SRC_LANG);
+
+const LANG_NAMES={ar:'Arabic',zh:'Chinese',ko:'Korean',ja:'Japanese',hi:'Hindi',ru:'Russian',fr:'French',de:'German',es:'Spanish',it:'Italian',pt:'Portuguese',nl:'Dutch',tr:'Turkish',he:'Hebrew',fa:'Persian',th:'Thai',vi:'Vietnamese',pl:'Polish',cs:'Czech',sv:'Swedish',el:'Greek',uk:'Ukrainian',id:'Indonesian',sw:'Swahili',bg:'Bulgarian',en:'English',bn:'Bengali',ms:'Malay',tl:'Filipino',ur:'Urdu',mn:'Mongolian',ne:'Nepali',pa:'Punjabi',gu:'Gujarati',ta:'Tamil',te:'Telugu',mr:'Marathi',jv:'Javanese',ceb:'Cebuano',az:'Azerbaijani',kk:'Kazakh',hy:'Armenian',ka:'Georgian',ro:'Romanian',ca:'Catalan',ht:'Haitian Creole',no:'Norwegian',da:'Danish',is:'Icelandic',af:'Afrikaans',sk:'Slovak',hr:'Croatian',sr:'Serbian',sl:'Slovenian',mk:'Macedonian',hu:'Hungarian',fi:'Finnish',et:'Estonian',lv:'Latvian',lt:'Lithuanian',sq:'Albanian',eu:'Basque',mt:'Maltese',ga:'Irish',cy:'Welsh',yi:'Yiddish',ha:'Hausa',yo:'Yoruba',ig:'Igbo',am:'Amharic',so:'Somali',zu:'Zulu',xh:'Xhosa',be:'Belarusian',bs:'Bosnian',dz:'Dzongkha',fil:'Filipino',km:'Khmer',ky:'Kyrgyz',lo:'Lao',mg:'Malagasy',my:'Burmese',ps:'Pashto',rw:'Kinyarwanda',si:'Sinhala',tg:'Tajik',ti:'Tigrinya',tk:'Turkmen',uz:'Uzbek',la:'Latin'};
+
+const MYMEMORY_EMAIL = 'info@crazy-midi.de';
+const DELAY_MS = 350;
+
+const $ = id => document.getElementById(id);
+let running = false;
+let stopRequested = false;
+
+function storageKey(phrase){ return `gr_wesnow_test_${phrase}`; }
+function loadPhraseCache(phrase){ try{ return JSON.parse(localStorage.getItem(storageKey(phrase))||'{}'); }catch(e){ return {}; } }
+function savePhraseCache(phrase, data){ localStorage.setItem(storageKey(phrase), JSON.stringify(data)); }
+
+function log(msg, cls){
+  const line=document.createElement('div');
+  if(cls) line.className=cls;
+  line.textContent=msg;
+  $('log').appendChild(line);
+  $('log').scrollTop=$('log').scrollHeight;
+}
+
+function updateProgress(done,total){
+  $('progress').textContent=`${done} / ${total}`;
+  $('barFill').style.width = total?`${(done/total*100).toFixed(1)}%`:'0%';
+}
+
+async function translateOne(text,target){
+  const emailParam = MYMEMORY_EMAIL?`&de=${encodeURIComponent(MYMEMORY_EMAIL)}`:'';
+  const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${SRC_LANG}|${target}${emailParam}`);
+  const data=await res.json();
+  const status=data.responseStatus;
+  if(status && status!==200 && status!=='200'){
+    const quota=(status===403||status==='403'||status===429||status==='429');
+    return {error: quota?'quota':`status ${status}`};
+  }
+  const t=data.responseData?.translatedText;
+  if(!t) return {error:'empty'};
+  return {text:t};
+}
+
+function renderHead(){
+  const head=$('resultHead');
+  head.innerHTML = '<th>Sprache</th>' + PHRASES.map(p=>`<th>${p}</th>`).join('');
+}
+
+function renderTable(results){
+  const body=$('resultBody');
+  body.innerHTML='';
+  for(const lang of LANGS){
+    const tr=document.createElement('tr');
+    const name=LANG_NAMES[lang]||lang;
+    const vals=PHRASES.map(p=>results[p]?.[lang]||'');
+    tr.innerHTML = `<td class="lang">${lang} — ${name}</td>` + vals.map(v=>`<td>${v?v.replace(/</g,'&lt;'):'…'}</td>`).join('');
+    body.appendChild(tr);
+  }
+}
+
+function renderOutput(results){
+  $('out').value = JSON.stringify(results, null, 2);
+}
+
+async function run(){
+  running=true; stopRequested=false;
+  $('startBtn').disabled=true; $('stopBtn').disabled=false;
+
+  const results={};
+  for(const p of PHRASES) results[p]=loadPhraseCache(p);
+  renderTable(results); renderOutput(results);
+
+  const total=PHRASES.length*LANGS.length;
+  let done=0;
+  for(const p of PHRASES) done += Object.keys(results[p]).length;
+  updateProgress(done,total);
+  log(`Start — ${done}/${total} bereits im Cache.`);
+
+  outer:
+  for(const phrase of PHRASES){
+    const cache=results[phrase];
+    for(const lang of LANGS){
+      if(stopRequested){ log('Gestoppt.','warn'); break outer; }
+      if(cache[lang]){ continue; }
+      try{
+        const r=await translateOne(phrase,lang);
+        if(r.error==='quota'){
+          log(`STOP: Quota/Rate-Limit bei "${phrase}" -> ${lang}. Fortschritt gespeichert.`,'err');
+          break outer;
+        }
+        if(r.error){
+          log(`Fehler bei "${phrase}" -> ${lang}: ${r.error}`,'warn');
+        }else{
+          cache[lang]=r.text;
+          log(`"${phrase}" -> ${lang}: ${r.text}`);
+        }
+      }catch(e){
+        log(`Netzwerkfehler bei "${phrase}" -> ${lang}: ${e.message}`,'err');
+      }
+      savePhraseCache(phrase,cache);
+      done++;
+      updateProgress(done,total);
+      renderTable(results);
+      renderOutput(results);
+      await new Promise(r=>setTimeout(r,DELAY_MS));
+    }
+  }
+
+  running=false;
+  $('startBtn').disabled=false; $('stopBtn').disabled=true;
+  log('Fertig (oder pausiert).');
+}
+
+$('startBtn').addEventListener('click', () => { if(!running) run(); });
+$('stopBtn').addEventListener('click', () => { stopRequested=true; });
+$('resetBtn').addEventListener('click', () => {
+  for(const p of PHRASES) localStorage.removeItem(storageKey(p));
+  $('log').innerHTML='';
+  $('out').value='';
+  $('resultBody').innerHTML='';
+  updateProgress(0, PHRASES.length*LANGS.length);
+  log('Alle Caches gelöscht.');
+});
+$('copyBtn').addEventListener('click', () => {
+  $('out').select();
+  document.execCommand('copy');
+  log('In Zwischenablage kopiert.');
+});
+
+(function init(){
+  renderHead();
+  const results={};
+  for(const p of PHRASES) results[p]=loadPhraseCache(p);
+  renderTable(results); renderOutput(results);
+  updateProgress(Object.values(results).reduce((s,r)=>s+Object.keys(r).length,0), PHRASES.length*LANGS.length);
+})();
+</script>
+</body>
+</html>
