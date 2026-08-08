@@ -5039,6 +5039,21 @@ async function discoverCandidates(){
      abandon it and fetch a fresh batch instead of resolving the remainder. */
   let _consecutiveBatchSkips=0;
   const BATCH_ABANDON_THRESHOLD=3;
+  /* Hard cap on ACCEPTED candidates per batch, independent of the per-
+     country/artist/release dedup above — those only catch clumping that
+     hashes to the SAME key. A themed compilation series (different volumes,
+     different specific tracks/artists per volume, each individually distinct
+     enough to pass every check above) can still flood a batch and read as
+     repetitive to an actual listener ("Acid Sampler Vol.1" ... "Acid Sampler
+     Vol.2" ... one after another) — MB's own result ordering for a given
+     random offset tends to cluster related catalog entries together, so
+     that kind of thematic repetition lives WITHIN one batch far more than
+     across batches. Capping how many of any one batch's 25 ever get
+     accepted, regardless of how varied they look on paper, forces a fresh
+     random offset (a different, unrelated slice of MB) well before a
+     cluster like that can dominate. */
+  let _batchAccepted=0;
+  const MAX_ACCEPTED_PER_BATCH=3;
   /* Some UN member states have so few MB artists total (Nauru: 2, Tuvalu: 2,
      Micronesia: 2...) that they can structurally never reach CAP=6 — no
      amount of searching will produce candidates that don't exist. Without a
@@ -5071,6 +5086,7 @@ async function discoverCandidates(){
             _batchCountriesUsed=new Set(); // new batch → reset per-batch tracking
             _batchArtistsUsed=new Set();
             _batchReleasesUsed=new Set();
+            _batchAccepted=0;
             if(!_urlBuf.length)continue;
           }
           const f=_urlBuf.shift();
@@ -5283,6 +5299,17 @@ async function discoverCandidates(){
         }
         updateFlagBar(); // live update after each candidate
         setBuffer(); // keep header showing buffer progress (X/3), not raw pool internals
+
+        /* See MAX_ACCEPTED_PER_BATCH's own comment above — force a fresh
+           random offset once this batch has contributed its share, even if
+           plenty of superficially-valid candidates are still sitting in
+           _urlBuf. Same "discard and refetch" mechanism the abandon-on-
+           consecutive-skips logic above already uses. */
+        _batchAccepted++;
+        if(_batchAccepted>=MAX_ACCEPTED_PER_BATCH && _urlBuf.length>0){
+          console.log(`%c[batch #${_batchCounter}] ${_batchAccepted} accepted — moving to a fresh batch instead of the remaining ${_urlBuf.length}`,'color:#f59e0b;font-weight:bold');
+          _urlBuf=[];
+        }
 
         console.log(`%c[pool ${candidates.length}] %c${code||'??'} %c${word} %cby ${cand.artist}`,
           'color:#999','color:#0891b2;font-weight:bold','color:#1a1040','color:#666;font-style:italic');
