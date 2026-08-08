@@ -337,6 +337,11 @@ main,#fixed-footer{position:relative;z-index:1;max-width:640px;margin:0 auto;pad
   background:#00ff41;box-shadow:0 0 4px #00ff4188;
   transition:width .4s;
 }
+/* GESPIELT's fill bar means something different from the other three
+   matrices' (relative play count vs. live pool occupancy — see
+   _playedSlotPct()) — a distinct color makes that visually obvious at a
+   glance instead of only discoverable by comparing numbers in the tooltip. */
+#played-bar .flag-fill{background:#3b82f6;box-shadow:0 0 4px #3b82f688}
 /* Cumulative counter badge, last item in the flag row — roughly 2 flag-
    slots wide, set apart with a border so it doesn't read as just another
    flag. Uses the same min-height as .flag-slot so it doesn't disturb the
@@ -3533,6 +3538,17 @@ function _foundSlotPct(code){
   return Math.min(stack.length/CAP,1);
 }
 
+/* GESPIELT's fill bar shows something different from IM POOL/IN QUEUE's:
+   pool occupancy right now isn't a meaningful number for "how much has this
+   country actually played" (a country could have played 10 times with an
+   empty pool this instant, or once with a full one) — relative play count
+   against the country with the most plays is the useful signal there.
+   Math.max(1,...) avoids a divide-by-zero before anything has played yet. */
+function _playedSlotPct(code){
+  const max=Math.max(1,...Object.values(_playCountByCountry));
+  return (_playCountByCountry[code]||0)/max;
+}
+
 /* ── IN QUEUE slot ── Created and removed on demand by _syncQueueBar(),
    keyed by the item's stable .slot (0/1/2), NOT by country code like IM
    POOL is — see the comment above _poolLiveCodes()/_syncLiveBar() for why
@@ -3657,11 +3673,12 @@ function _appendPlayedSlot(code){
 function _updatePoolFillBars(barId){
   const bar=$(barId);
   if(!bar)return;
+  const pctFn=barId==='played-bar'?_playedSlotPct:_foundSlotPct;
   for(const slot of bar.children){
     const code=slot.dataset.code;
     if(code===undefined) continue; // skip the counter badge itself
     const fill=slot.querySelector('.flag-fill');
-    if(fill) fill.style.width=_foundSlotPct(code)*100+'%';
+    if(fill) fill.style.width=pctFn(code)*100+'%';
   }
 }
 
