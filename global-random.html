@@ -6073,6 +6073,15 @@ function _playWEIntro(){
       $('embed-wrapper').classList.add('empty','embed-wrapper-blank');
       $('t-title').textContent='';$('t-artist').textContent='';
       $('t-genre').textContent='';$('t-meta').textContent='';
+      /* Snow: same "no snow is more honest than wrong/stale snow" reasoning
+         as playReady()'s own track-transition clear (see its comment) —
+         without this, the intro's hardcoded WE_INTRO_SNOW_WORDS just kept
+         falling through the entire empty-queue wait (reported live), since
+         nothing else in this fallback ever touches snow at all. Emptying
+         currentSnowWords is enough to stop new bubbles spawning (startSnow()'s
+         interval no-ops on an empty list); no need to also flip
+         snowStarted off. */
+      setSnowWords([]);
       /* "I am searching, please stand by." — the other half of the
          original combined welcome sample, now split off specifically for
          this fallback. Awaited before the tune restarts, same
