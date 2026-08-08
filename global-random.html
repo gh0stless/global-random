@@ -5054,16 +5054,14 @@ async function discoverCandidates(){
      cluster like that can dominate. */
   let _batchAccepted=0;
   const MAX_ACCEPTED_PER_BATCH=3;
-  /* Relaxed during warm-up: a brand new session has an empty pool and
-     nothing playable yet, so getting to "3 distinct country pools" (the
-     diversity gate promoteFromPool() waits on) and beyond quickly matters
-     more than avoiding an occasional thematic cluster nobody's listening
-     to a run of yet anyway — there's no "that sounded repetitive" moment
-     possible before any track has even started. Once the pool is past
-     POOL_WELL_STOCKED, same threshold already used elsewhere for "session
-     is past its early scramble", drop to the strict cap for the rest of
-     the session. */
-  const WARMUP_MAX_ACCEPTED_PER_BATCH=MAX_ACCEPTED_PER_BATCH*3;
+  /* Same cap from the very first batch, no warm-up exception — tried
+     relaxing this early on, then reconsidered: the diversity gate
+     promoteFromPool() waits on (3 distinct country pools) wants DIFFERENT
+     countries fast, and more frequent independent random-offset draws is
+     exactly what gets there quicker, not slower. Letting one lucky early
+     batch contribute more just means spending longer in whatever single
+     neighborhood that first random offset happened to land in, which is
+     the opposite of what warm-up actually needs. */
   /* Some UN member states have so few MB artists total (Nauru: 2, Tuvalu: 2,
      Micronesia: 2...) that they can structurally never reach CAP=6 — no
      amount of searching will produce candidates that don't exist. Without a
@@ -5314,12 +5312,10 @@ async function discoverCandidates(){
            random offset once this batch has contributed its share, even if
            plenty of superficially-valid candidates are still sitting in
            _urlBuf. Same "discard and refetch" mechanism the abandon-on-
-           consecutive-skips logic above already uses. Threshold itself
-           relaxes during warm-up — see WARMUP_MAX_ACCEPTED_PER_BATCH. */
+           consecutive-skips logic above already uses. */
         _batchAccepted++;
-        const _acceptCap=candidates.length<POOL_WELL_STOCKED?WARMUP_MAX_ACCEPTED_PER_BATCH:MAX_ACCEPTED_PER_BATCH;
-        if(_batchAccepted>=_acceptCap && _urlBuf.length>0){
-          console.log(`%c[batch #${_batchCounter}] ${_batchAccepted} accepted (cap ${_acceptCap}) — moving to a fresh batch instead of the remaining ${_urlBuf.length}`,'color:#f59e0b;font-weight:bold');
+        if(_batchAccepted>=MAX_ACCEPTED_PER_BATCH && _urlBuf.length>0){
+          console.log(`%c[batch #${_batchCounter}] ${_batchAccepted} accepted — moving to a fresh batch instead of the remaining ${_urlBuf.length}`,'color:#f59e0b;font-weight:bold');
           _urlBuf=[];
         }
 
