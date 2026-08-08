@@ -3543,10 +3543,18 @@ function _foundSlotPct(code){
    country actually played" (a country could have played 10 times with an
    empty pool this instant, or once with a full one) — relative play count
    against the country with the most plays is the useful signal there.
-   Math.max(1,...) avoids a divide-by-zero before anything has played yet. */
+   Math.max(1,...) avoids a divide-by-zero before anything has played yet.
+   sqrt(), not a straight ratio: the fill bar itself is tiny (~16-24px, sized
+   off the flag glyph, no dedicated width) — a linear scale packs almost all
+   its visual resolution into differences near the max, exactly where the
+   country-weighting system's whole point is that no single country usually
+   gets there. Most played countries realistically cluster low (1-5 plays);
+   sqrt stretches THAT range apart at the cost of compressing the high end,
+   which trades away resolution nothing was really using anyway. Exact counts
+   are always still available on hover via _countryTipText(). */
 function _playedSlotPct(code){
   const max=Math.max(1,...Object.values(_playCountByCountry));
-  return (_playCountByCountry[code]||0)/max;
+  return Math.sqrt((_playCountByCountry[code]||0)/max);
 }
 
 /* ── IN QUEUE slot ── Created and removed on demand by _syncQueueBar(),
