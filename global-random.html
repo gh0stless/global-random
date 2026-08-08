@@ -561,6 +561,15 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    why the main player needed this too, not just the 3 preview slots. */
 #embed-wrapper.empty iframe{opacity:0}
 #embed-wrapper.empty{background:var(--surface);border:1px dashed var(--border);border-radius:10px}
+/* Extra modifier for the intro-skip-into-empty-queue fallback (see finish()
+   in _playWEIntro()): that case sits in "searching" state for an
+   unpredictable, potentially long stretch (waiting on discovery to fill the
+   pool), not the ~1-2s a normal track-to-track gap takes — the dashed
+   placeholder box reads as an honest "loading" cue there, but as a stuck
+   leftover artifact here. Reported live. Layered on top of .empty (which
+   still hides the iframe) purely to blank out the box look; reserved
+   height stays identical either way. */
+#embed-wrapper.embed-wrapper-blank{background:transparent;border-color:transparent}
 /* ── Preview stack: the two other candidates currently sitting in
    `queue`, shown live but always dimmed/locked — they never get .play()
    called on them (see _syncPreviewSlots), just .loadUri() so cover/title
@@ -6052,14 +6061,16 @@ function _playWEIntro(){
          #track-info still showed its purple left-bar the whole time nothing
          was playing (reported live). track-info-empty makes just the border
          invisible, same reserved layout space throughout — no jump when it
-         comes back. #embed-wrapper doesn't need the same treatment: adding
-         .empty here is the same dashed "something will load here soon" look
-         it already shows between two real tracks, which is an honest,
-         correct signal for "still searching", not an artifact — it's the
-         W:E content sitting frozen behind it (now cleared above) that made
-         it read as stuck. */
+         comes back. #embed-wrapper: .empty alone was tried here first on the
+         theory that it's the same honest "something will load here soon"
+         dashed box a normal track-to-track gap shows — but that gap is
+         ~1-2s, while this fallback can sit in "still searching" for however
+         long discovery takes to refill the pool, which reads as a stuck
+         leftover box, not a loading cue (reported live). embed-wrapper-blank
+         layers on top to hide the box itself while .empty still hides the
+         iframe — see its own CSS comment. */
       $('track-info').classList.add('track-info-empty');
-      $('embed-wrapper').classList.add('empty');
+      $('embed-wrapper').classList.add('empty','embed-wrapper-blank');
       $('t-title').textContent='';$('t-artist').textContent='';
       $('t-genre').textContent='';$('t-meta').textContent='';
       /* "I am searching, please stand by." — the other half of the
@@ -6273,11 +6284,17 @@ function mobileFirstPlay(){
   if(_transitioning)return; // see its own declaration
   _transitioning=true; // this function is fully synchronous, so cleared at its own end below
   _showWEBanner(false); // search phase over, same as desktop playReady()
-  /* Undo the intro-skip empty-queue fallback's track-info-empty class (see
-     finish() in _playWEIntro()) — this is the mobile path that can follow
-     it (handleBtn() -> _startMobileMusic() -> here) once a real track is
-     actually ready. No-op if it was never added. */
+  /* Undo the intro-skip empty-queue fallback's track-info-empty/
+     embed-wrapper classes (see finish() in _playWEIntro()) — this is the
+     mobile path that can follow it (handleBtn() -> _startMobileMusic() ->
+     here) once a real track is actually ready. No-op if they were never
+     added. Unlike desktop's playReady(), this function never adds .empty
+     itself (loadUri+play() happen synchronously here, no dice-roll/900ms
+     gap to bridge visually), so without this removal the fallback's
+     .empty would hide the iframe (opacity:0) permanently on mobile —
+     nothing else on this path ever clears it. */
   $('track-info').classList.remove('track-info-empty');
+  $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
   stopSearchTune(); // stop loop AND audio
   playDiceSound();
   const item=_pickRandomFromQueue();
@@ -6617,8 +6634,10 @@ function playReady(){
        same moment the preview refill above becomes visible, and for the
        same reason: loadUri() paints the embed (cover/title/duration) even
        before playback actually starts, so this is genuinely "something is
-       here now", not a premature reveal. */
-    $('embed-wrapper').classList.remove('empty');
+       here now", not a premature reveal. embed-wrapper-blank is cleared
+       alongside it — a no-op unless the intro-skip empty-queue fallback
+       added it (see finish() in _playWEIntro()). */
+    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
     EC.loadUri('spotify:track:'+item.id);
     /* Tried shortening this to 150ms on the theory that it was pure
        connection-speed padding — WRONG, and confirmed wrong the hard way:
