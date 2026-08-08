@@ -982,7 +982,7 @@ const MYMEMORY_EMAIL='info@crazy-midi.de';
       evicts the OLDEST one instead of being discarded — the pool always
       holds the freshest discoveries, and no single country can flood it.
 
-   3. BATCH-LEVEL DEDUP — one mbRandomSearch() fetch returns 25 URLs that
+   3. BATCH-LEVEL DEDUP — one mbRandomSearch() fetch returns 9 URLs that
       are often from the same bulk import (a whole symphony box set, all
       same country/artist). At most 1 candidate per country AND per artist
       is kept per batch, so a single import can't clump several pool slots.
@@ -1023,7 +1023,7 @@ const MYMEMORY_EMAIL='info@crazy-midi.de';
    ALGORITHM — high-level pipeline
    ══════════════════════════════════════════════════════════════════
    discoverCandidates() [background, runs continuously]
-     → mbRandomSearch(): fetch 25 random Spotify-linked URLs from MB
+     → mbRandomSearch(): fetch 9 random Spotify-linked URLs from MB
      → resolve each: URL → recording → artist → country
          (MB's own country/area field, else Wikipedia-bio demonym fallback
           via resolveCountryViaWikiBio() — see that function's own comment)
@@ -2907,12 +2907,12 @@ async function mbRandomSearch(){
     : Math.floor(Math.random()*_mbOffsetCeiling);
   for(const q of variants){
     const data=await mbFetch(
-      `https://musicbrainz.org/ws/2/url?query=${encodeURIComponent(q)}&limit=25&offset=${offset}&fmt=json`
+      `https://musicbrainz.org/ws/2/url?query=${encodeURIComponent(q)}&limit=9&offset=${offset}&fmt=json`
     );
     const urls=(data.urls??[]).filter(u=>u.resource?.includes('open.spotify.com/track/'));
     if(!urls.length)continue;
-    if(probing && offset+25>_mbOffsetCeiling){
-      _mbOffsetCeiling=offset+25;
+    if(probing && offset+9>_mbOffsetCeiling){
+      _mbOffsetCeiling=offset+9;
       console.log(`%c[mb] offset ceiling expanded to ${_mbOffsetCeiling.toLocaleString()}`,'color:#00ff41;font-weight:bold');
     }
     /* Deliberately NOT shuffled (used to be — removed). discoverCandidates()
@@ -2922,9 +2922,9 @@ async function mbRandomSearch(){
        order tends to cluster bulk imports together (a whole box set added
        to the catalog in one go gets adjacent-ish entries — see the BATCH-
        LEVEL DEDUP comment further up). Shuffling scattered those clusters
-       across all 25 positions, so the same homogeneous batch that used to
+       across all 9 positions, so the same homogeneous batch that used to
        trigger an early bail after ~3 items instead burned through most or
-       all of it before giving up — ~75 MB calls instead of ~9 for the same
+       all of it before giving up — ~27 MB calls instead of ~9 for the same
        useless batch. Keeping natural order costs essentially nothing on
        fairness: which specific track wins a same-country slot within one
        batch was never the thing protecting randomness anyway — that's
@@ -4951,7 +4951,7 @@ function detectSilentTrack(itemId){
 
 /* ── Search engine ──
    ALGORITHM OVERVIEW (as of the current design):
-   1. mbRandomSearch() pulls 25 random Spotify-linked URLs from MusicBrainz
+   1. mbRandomSearch() pulls 9 random Spotify-linked URLs from MusicBrainz
       per fetch (offset grows over the session — see mbRandomSearch()).
    2. Each URL is resolved: URL → recording → artist → country (with a
       Wikipedia-bio demonym fallback if MB's own country/area field is empty
@@ -5011,7 +5011,7 @@ async function discoverCandidates(){
   }
   engineRunning=true;
   let _urlBuf=[]; // local — discarded when pool is full, fresh fetch next run
-  /* MB often returns a batch (25 URLs from one fetch) where many entries are
+  /* MB often returns a batch (9 URLs from one fetch) where many entries are
      from the same bulk import — e.g. an entire symphony box set, all same
      country/artist. Tracking which countries we've already taken ONE
      candidate from THIS batch stops that clumping: at most 1 pick per
@@ -5048,7 +5048,7 @@ async function discoverCandidates(){
      Vol.2" ... one after another) — MB's own result ordering for a given
      random offset tends to cluster related catalog entries together, so
      that kind of thematic repetition lives WITHIN one batch far more than
-     across batches. Capping how many of any one batch's 25 ever get
+     across batches. Capping how many of any one batch's 9 ever get
      accepted, regardless of how varied they look on paper, forces a fresh
      random offset (a different, unrelated slice of MB) well before a
      cluster like that can dominate. */
@@ -5085,7 +5085,7 @@ async function discoverCandidates(){
       try{
         let found, code;
         {
-          /* Refill buffer only when empty — 1 fetch = 25 candidates to resolve */
+          /* Refill buffer only when empty — 1 fetch = 9 candidates to resolve */
           if(!_urlBuf.length){
             _urlBuf=await mbRandomSearch();
             _batchCounter++;
@@ -5228,7 +5228,7 @@ async function discoverCandidates(){
            batch skewed toward unresolvable-country tracks — common, MB's
            own country tagging is inconsistent and the Wikipedia-bio
            fallback doesn't always find a demonym either — used to get
-           chewed through in full (25 candidates × 3 serial MB calls each)
+           chewed through in full (9 candidates × 3 serial MB calls each)
            instead of abandoned early. */
         if(code){
           _consecutiveBatchSkips=0; // reset — this resolve produced a usable new country
