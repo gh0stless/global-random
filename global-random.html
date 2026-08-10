@@ -3255,14 +3255,17 @@ function setHdr(text){
    which is exactly the point this whole project is making. */
 function poolStats(){
   const totalPools=COUNTRIES.length+1; // +1 for the unknown pool
-  /* candidates.length alone drops to 0 every time everything currently
-     found has just been promoted into the queue (splice() removes them
-     from candidates as they move) — technically correct, but reads as a
-     confusing "reset to 0" even though nothing was actually lost, just
-     relocated. Counting queue.length too gives the honest total of
-     "candidates discovered and not yet played", regardless of which of
-     the two buckets they're currently sitting in. */
-  return {current:candidates.length+queue.length, max:totalPools*CAP};
+  /* candidates.length alone, NOT +queue.length — this used to add queue.length
+     too, on the theory that a pool-only count "reads as a confusing reset to 0"
+     the instant everything currently found gets promoted into the queue at
+     once. That reasoning missed that this header number is meant to describe
+     the SAME thing the IM POOL flag bars show (_foundSlotPct() is pool-only,
+     countryStacks-based, never queue) — summing the two in the header but not
+     in the flags meant the header total could never actually be reconciled
+     against what the flags visibly added up to (reported live). The queue
+     side isn't lost either way: setBuffer() already shows queue.length/
+     BUFFER_SIZE right next to this as its own separate fraction. */
+  return {current:candidates.length, max:totalPools*CAP};
 }
 function setBuffer(prefix=''){
   const {current,max}=poolStats();
