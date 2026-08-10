@@ -2120,17 +2120,10 @@ let samJingleBuffers = [];
 let samStandbyBuffer = null;
 let audioCtx = null;
 let masterGain = null;
-let samGain = null;
 /* Global volume factor for all our own Web Audio playback (tune, S.A.M. samples, jingles,
    openers, easter eggs) — 1.0 = unchanged, 0.5 = half as loud, etc. One number to tune the
    whole mix instead of re-encoding every sample. */
-const MASTER_VOLUME = 0.5;
-/* S.A.M. voice samples/jingles/openers/easter eggs specifically read louder than the ambient
-   tune at equal MASTER_VOLUME (different source material, not a mixing choice) — this sits
-   between the S.A.M. buffers and masterGain to bring just the voice down relative to
-   everything else, instead of re-tuning MASTER_VOLUME and quieting the tune too. Multiplies
-   with MASTER_VOLUME (0.4 here × 0.5 master = 0.2 effective), not a replacement for it. */
-const SAM_VOLUME_FACTOR = 0.4;
+const MASTER_VOLUME = 0.4;
 
 async function initAudio(){
   if(tuneBuffer) return;
@@ -2143,9 +2136,6 @@ async function initAudio(){
     masterGain = audioCtx.createGain();
     masterGain.gain.value = MASTER_VOLUME;
     masterGain.connect(audioCtx.destination);
-    samGain = audioCtx.createGain();
-    samGain.gain.value = SAM_VOLUME_FACTOR;
-    samGain.connect(masterGain);
     const bin = atob(TUNE_B64);
     const arr = new Uint8Array(bin.length);
     for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
@@ -2329,7 +2319,7 @@ async function playSam(){
     if(audioCtx.state==='suspended') await audioCtx.resume();
     const src = audioCtx.createBufferSource();
     src.buffer = samBuffer;
-    src.connect(samGain);
+    src.connect(masterGain);
     src.start();
   }catch(e){}
 }
@@ -2345,7 +2335,7 @@ async function playSamWeCanStart(){
     if(audioCtx.state==='suspended') await audioCtx.resume();
     const src = audioCtx.createBufferSource();
     src.buffer = samWeCanStartBuffer;
-    src.connect(samGain);
+    src.connect(masterGain);
     src.start();
   }catch(e){}
 }
@@ -2363,7 +2353,7 @@ async function playSamWelcome(){
     if(audioCtx.state==='suspended') await audioCtx.resume();
     const src = audioCtx.createBufferSource();
     src.buffer = samWelcomeBuffer;
-    src.connect(samGain);
+    src.connect(masterGain);
     await new Promise(resolve=>{
       src.onended=resolve;
       src.start();
@@ -2410,7 +2400,7 @@ async function playAudioBuffer(buffer){
   if(audioCtx.state==='suspended') await audioCtx.resume();
   const src = audioCtx.createBufferSource();
   src.buffer = buffer;
-  src.connect(samGain); // jingles/openers/easter eggs are all S.A.M. voice content, same as playSam() etc. above
+  src.connect(masterGain);
   await new Promise(resolve=>{
     src.onended=resolve;
     src.start();
@@ -2468,7 +2458,7 @@ async function playSamStandby(){
     if(audioCtx.state==='suspended') await audioCtx.resume();
     const src = audioCtx.createBufferSource();
     src.buffer = samStandbyBuffer;
-    src.connect(samGain);
+    src.connect(masterGain);
     await new Promise(resolve=>{
       src.onended=resolve;
       src.start();
