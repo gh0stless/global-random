@@ -5419,19 +5419,25 @@ setInterval(()=>{
    have ≥1 candidate — not round-robin. Every pot with something in it has
    an equal 1/N chance each draw, same as reaching into a real random pot,
    rather than a deterministic rotation through a fixed order. */
-/* First-ever promote of the session waits for at least 3 distinct pools
-   (countries, or the unknown pool counting as one) to have ≥1 candidate —
-   NOT for translations (that wait was removed deliberately), just for
-   enough underlying variety to exist before the very first random draw
-   happens. Without this, the first pool entry gets promoted instantly and
-   played with zero alternatives to have been drawn against — whatever MB
-   handed back first, no matter how skewed. A single bulk import (e.g. a
-   whole symphony box under one country/artist) can supply at most ONE of
-   these 3 slots regardless, since the per-batch country+artist dedup caps
-   it there — so this gate is cheap (usually met within 2-4 batches, a
-   handful of seconds) and doesn't reintroduce the old multi-second wait
-   for translations that was explicitly removed. Applies once; every
-   subsequent refill just runs normally. */
+/* First-ever promote of the session waits for at least 3 candidates total
+   (any pool) to exist — NOT for translations (that wait was removed
+   deliberately), just for enough underlying variety to exist before the
+   very first random draw happens. Without this, the first pool entry gets
+   promoted instantly and played with zero alternatives to have been drawn
+   against — whatever MB handed back first, no matter how skewed.
+   Used to require 3 DISTINCT pools (countries, or the unknown pool
+   counting as one) instead of 3 candidates — but MB's country tagging and
+   the Wikipedia-bio fallback don't always resolve a country, and a batch
+   run skewed toward unresolvable-country tracks kept piling into the
+   single unknown pool (which only ever counts as ONE of the 3 slots, no
+   matter how many unknown finds land in it) while the other two slots sat
+   waiting on genuinely rare distinct-country resolutions — reported live,
+   startup stuck at 0/3 far longer than the "usually 2-4 batches" this gate
+   was meant to cost. Counting total candidates instead still guarantees
+   real alternatives exist before the first draw (a single bulk import can
+   still supply at most one, capped by the per-batch country+artist dedup),
+   just without penalizing sessions where country resolution happens to be
+   slow. Applies once; every subsequent refill just runs normally. */
 let _firstPromoteDiversityMet=false;
 let _promotingLock=false;
 async function promoteFromPool(){
@@ -5445,9 +5451,7 @@ async function promoteFromPool(){
   _promotingLock=true;
   try{
     if(!_firstPromoteDiversityMet){
-      const distinctPools=Object.keys(countryStacks).filter(c=>countryStacks[c].length>0).length
-        + (_unknownPool.length>0?1:0);
-      if(distinctPools<3) return; // not enough variety yet — discovery keeps running, try again next call
+      if(candidates.length<3) return; // not enough variety yet — discovery keeps running, try again next call
       _firstPromoteDiversityMet=true;
     }
     while(queue.length<BUFFER_SIZE && candidates.length>0){
