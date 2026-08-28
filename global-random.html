@@ -4489,6 +4489,27 @@ async function loadMeta(item){
   })();
   await item._loading;
   item._loading=null;
+  /* A genuine MB failure (a 503/504 burst that outlasts mbFetch's own
+     4-attempt retry — confirmed live) leaves item.allWords permanently at
+     [] — the "already resolved" fast path at the top of this function
+     treats an empty array the same as a real result and never tries
+     again on its own. Fine for a background prefetch item (plenty of
+     other candidates already in the pool); costly for the track actually
+     PLAYING right now: no genre/translation/snow for its entire
+     remaining runtime, just because MB had a bad few seconds exactly
+     when this track started. One retry, well after mbFetch's own
+     backoff window (which alone can already run ~15s) has had time to
+     clear — only fires for the track still actually on screen when the
+     delay elapses, and resets allWords first so this doesn't just hit
+     the same "already resolved" fast path again. */
+  if(item.allWords?.length===0 && playingItem?.id===item.id){
+    setTimeout(()=>{
+      if(playingItem?.id===item.id && item.allWords?.length===0){
+        item.allWords=null;
+        loadMeta(item);
+      }
+    },20000);
+  }
 }
 
 /* Render step — assumes item.allWords/item.trans/item.country etc. are
