@@ -4264,12 +4264,30 @@ async function loadMeta(item){
           ?? null;
         if(code && !isRealCountryCode(code)) code=null; // e.g. XW "[Worldwide]" → treat as unknown
         /* Own artist record has no country → follow MBID to Wikipedia bio,
-           scan for a nationality demonym ("American", "German singer"...) */
-        if(!code){
-          code = await resolveCountryViaWikiBio(artistId);
-          if(code && !isRealCountryCode(code)) code=null; // same whitelist gap as discoverCandidates
-          if(!stillRelevant())return;
-        }
+           scan for a nationality demonym ("American", "German singer"...).
+           Deliberately NOT awaited here anymore — this shares MB's single
+           globally-rate-limited serial queue (mbFetch's _mbQueue) with
+           discovery, prefetch, and this same track's own two calls above,
+           and unlike those, its result isn't actually needed for anything
+           on the critical path: translateAll() further down already
+           defaults to srcLang='en' when code is null, exactly the same
+           fallback as if this lookup had failed anyway. Reported live:
+           an unknown-country track's own info card AND snow sat blocked
+           behind this one extra MB round-trip, worst exactly when MB
+           itself was already under load (retries stack up serially) —
+           for a lookup that, being "unknown" in the first place, quite
+           often doesn't even resolve anything at all. Runs in the
+           background instead; patches item + re-renders in place if/when
+           it resolves, same backfill pattern _renderPlayingMeta() already
+           relies on for discovery's own country misses (see its comment). */
+        resolveCountryViaWikiBio(artistId).then(wCode=>{
+          if(wCode && !isRealCountryCode(wCode)) wCode=null;
+          if(!wCode) return;
+          item.countryCode=wCode;
+          item.country=_countryDisplayName(wCode,BROWSER_LANG||'en');
+          item.info=`${flagEmoji(wCode)} ${item.country}${item.year?' · 📅'+item.year:''}`;
+          if(playingItem?.id===spotifyId) _renderPlayingMeta(item);
+        }).catch(()=>{});
         country=ar.area?.name??ar['begin-area']?.name??code??'';
         lang=COUNTRY_LANG[code]||'en';
       }
