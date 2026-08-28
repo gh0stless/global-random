@@ -585,6 +585,13 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 #we-footer-scroll-track.we-scroll-active{animation:we-scroll-left 31s linear forwards}
 @keyframes we-scroll-left{from{transform:translateX(var(--we-start-x,100%))}to{transform:translateX(var(--we-end-x,-100%))}}
 #give-inner{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+/* Own flex item so #give-inner's wrap treats the two buttons as one unit —
+   without this, #give-inner's own flex-wrap could wrap #fullscreen-btn
+   onto its own new line below #give-donate-btn instead of staying next to
+   it, reported live. Wraps together with #give-left on narrow viewports
+   exactly like the single donate button already did, never splits from
+   its own sibling button. */
+#give-actions{display:flex;flex-direction:row;gap:12px;flex-shrink:0}
 #give-left{display:flex;flex-direction:column;align-items:center;gap:8px}
 #give-logo-link{text-decoration:none;display:flex;flex-direction:row;align-items:center;gap:8px}
 #give-logo{height:32px;width:auto}
@@ -806,12 +813,14 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
       </a>
       <p id="give-desc"></p>
     </div>
-    <a href="https://www.givedirectly.org/donate" target="_blank" rel="noopener" id="give-donate-btn"
-       style="background:#e85d04;color:#fff;padding:12px 26px;border-radius:6px;text-decoration:none;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0">
-    </a>
-    <button id="fullscreen-btn" type="button"
-       style="background:#3b82f6;color:#fff;padding:12px 26px;border-radius:6px;border:0;cursor:pointer;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0">
-    </button>
+    <div id="give-actions">
+      <a href="https://www.givedirectly.org/donate" target="_blank" rel="noopener" id="give-donate-btn"
+         style="background:#e85d04;color:#fff;padding:12px 26px;border-radius:6px;text-decoration:none;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0;box-sizing:border-box;width:auto;height:auto;line-height:normal;display:inline-block">
+      </a>
+      <button id="fullscreen-btn" type="button"
+         style="background:#3b82f6;color:#fff;padding:12px 26px;border-radius:6px;border:0;cursor:pointer;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0;box-sizing:border-box;width:auto;height:auto;line-height:normal;display:inline-block">
+      </button>
+    </div>
   </div>
 </div>
 <div id="we-footer-banner" style="display:none">
@@ -1096,7 +1105,7 @@ const _UI_EN={
   welcomeStep1:'Best experience on Desktop',
   welcomeStep2:'Open Spotify\u2019s website in another tab and log in — no Premium needed',
   welcomeStep3:'Then come back and make your choice',
-  welcomeStep4:'Use the \u26f6 Fullscreen button for the full experience (snow effect)',
+  welcomeStep4:'Use the Fullscreen button for the full experience (snow effect)',
   welcomeMobileHint:'Make your choice',
   labelGenre:'GENRE',
   labelDonate:'DONATE',
@@ -1122,7 +1131,7 @@ const _UI_DE={
   welcomeStep1:'Beste Erfahrung nur auf Desktop',
   welcomeStep2:'Spotify in einem anderen Tab öffnen und einloggen — kein Pro nötig',
   welcomeStep3:'Dann zurückkommen und deine Wahl treffen',
-  welcomeStep4:'Nutze den ⛶ Vollbild-Button für die volle Erfahrung (Schneefall)',
+  welcomeStep4:'Nutze den Vollbild-Button für die volle Erfahrung (Schneefall)',
   welcomeMobileHint:'Triff deine Wahl',
   labelGenre:'GENRE',
   labelDonate:'SPENDEN',
@@ -1158,7 +1167,7 @@ $('hint-link').href='description.html';
 $('welcome-privacy-text').textContent=_UI_EN.welcomePrivacy;
 $('welcome-pill-title').textContent=_UI_EN.pillRedTitle;
 $('welcome-pill-blue-link').title=_UI_EN.pillBlueTitle;
-$('fullscreen-btn').textContent='⛶ '+_UI_EN.fullscreenBtn;
+$('fullscreen-btn').textContent=_UI_EN.fullscreenBtn;
 async function localizeUI(){
   if(BROWSER_LANG==='de'){
     $('hint-text').textContent=_UI_DE.hint;
@@ -1185,7 +1194,7 @@ async function localizeUI(){
     $('welcome-privacy-text').textContent=_UI_DE.welcomePrivacy;
     $('welcome-pill-title').textContent=_UI_DE.pillRedTitle;
     $('welcome-pill-blue-link').title=_UI_DE.pillBlueTitle;
-    $('fullscreen-btn').textContent='⛶ '+_UI_DE.fullscreenBtn;
+    $('fullscreen-btn').textContent=_UI_DE.fullscreenBtn;
   } else if(BROWSER_LANG!=='en'){
     /* These 20 strings never change — caching them in localStorage means
        a RETURNING visitor in the same browser language skips all 20
@@ -1263,7 +1272,7 @@ async function localizeUI(){
     if(wp)   $('welcome-privacy-text').textContent=wp;
     if(prt)  $('welcome-pill-title').textContent=prt;
     if(pbt)  $('welcome-pill-blue-link').title=pbt;
-    if(fsb)  $('fullscreen-btn').textContent='⛶ '+fsb;
+    if(fsb)  $('fullscreen-btn').textContent=fsb;
     // href stays 'description.html' — English fallback, since only DE/EN pages exist
   }
 }
@@ -2941,6 +2950,17 @@ localizeUI();
    there). Both the Joomla and Nextcloud iframe wrappers already grant
    allow="fullscreen" on their <iframe>, so requestFullscreen() works
    identically there — confirmed against both manifests, not assumed. */
+/* Hidden on mobile via JS against the real isMobile check (touch OR
+   <600px), not a CSS breakpoint — this codebase's CSS breakpoint for
+   "mobile" is 899px, already known to disagree with isMobile's own 600px/
+   touch logic for the 600-899px range (a touch-capable tablet at, say,
+   800px would be isMobile=true in JS but not hidden by a max-width:899px
+   rule's sibling max-width:600px, or vice versa). The button would be
+   functionally dead on mobile anyway: isMobile alone already short-
+   circuits translateAll() before fullscreen is even checked (see its own
+   guard), and iOS Safari doesn't support the Fullscreen API on arbitrary
+   elements at all. */
+if(isMobile) $('fullscreen-btn').style.display='none';
 $('fullscreen-btn').addEventListener('click',()=>{
   if(document.fullscreenElement){
     document.exitFullscreen().catch(()=>{});
