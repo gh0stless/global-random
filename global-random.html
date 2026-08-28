@@ -4468,6 +4468,18 @@ async function loadMeta(item){
         const viaEn = _en || await myMemory(fullTitle, srcLang, 'en');
         if(viaEn) _bl = await myMemory(viaEn, 'en', BROWSER_LANG) || null;
       }
+      /* Every path above genuinely tried and still came up with nothing —
+         MyMemory has no distinct BROWSER_LANG translation for this title
+         (reported live: "Nocturne", a shared loanword identical in EN/DE/
+         FR/IT, translates right back to itself — myMemory()'s own "same as
+         source = useless" filter correctly discards that, so _bl stays
+         null through every fallback). Silently collapsing to just the EN
+         half used to look like the browser-language slot was never
+         attempted at all. Only for BROWSER_LANG!=='en': when the UI IS
+         already English there's no second slot to explain away, _bl was
+         never even attempted (stayed null from its very first line) and
+         should stay silently absent, same as before. */
+      if(!_bl && BROWSER_LANG!=='en') _bl='n/a';
       item.trans=[_en,_bl].filter(Boolean).join(' · ');
       item.allWords=allWords;
       item._en=_en; // cached for termTrack() at render time
