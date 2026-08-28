@@ -1325,6 +1325,7 @@ let countdownStart=null;
 let isLoggedIn=false;
 let _firstPlayAt=null; // timestamp of the very first play — a simple running clock, not an accumulated sum
 let _previewConfirmed=false; // explicitly true once we KNOW this is preview-only (30s clips), not just "not yet confirmed logged in"
+let _consecutiveShortTracks=0; // streak of ≤31s tracks in a row — see detectLoginStatus()
 /* Candidate pool: tracks discovered but not yet committed to playback queue.
    Each has country resolved. We pick from here biased to rare countries. */
 const candidates=[];          // {id, title, code, country, lang}
@@ -2944,7 +2945,12 @@ function detectWordLang(word){
    while the current track plays for several minutes. No rush — so we keep
    the burst small and gentle rather than maximizing speed, to stay well
    clear of MyMemory's abuse detection. */
-async function _translateBatch(word, from, targets, batchSize=3, delayMs=700){
+/* onBatch(soFarRaw), if given, fires after EVERY mini-batch (not just at
+   the end) with the accumulated raw results so far (nulls included) — see
+   translateAll()'s onProgress for why: snow used to wait for the entire
+   ~20s run before showing a single word, even though real translations
+   start arriving every ~700ms from the very first mini-batch. */
+async function _translateBatch(word, from, targets, batchSize=3, delayMs=700, onBatch=null){
   const out=[];
   for(let i=0;i<targets.length;i+=batchSize){
     const batch=targets.slice(i,i+batchSize);
@@ -2953,12 +2959,22 @@ async function _translateBatch(word, from, targets, batchSize=3, delayMs=700){
       return w?{word:w,color:t.color,lang:t.lang}:null;
     }));
     out.push(...results);
+    if(onBatch) onBatch(out);
     if(i+batchSize<targets.length) await sleep(delayMs);
   }
   return out;
 }
 
-async function translateAll(word, fromLang, preSeeded=[]){
+/* onProgress(wordsSoFar), if given, fires after every mini-batch with the
+   same shape translateAll() itself eventually resolves to (source word +
+   preSeeded + whatever's been deduped/filtered so far) — reported live:
+   snow only appeared once a track was nearly over, because it wailed for
+   this whole ~87-language, ~20s batch to finish before showing a single
+   word, even though MyMemory starts returning real translations within the
+   first second or two. Callers that want snow to start as soon as the
+   FIRST usable word lands (instead of only once everything is in) pass a
+   callback here instead of waiting on the return value. */
+async function translateAll(word, fromLang, preSeeded=[], onProgress=null){
   const key=word+'|'+fromLang;
   if(_transCache.has(key))return _transCache.get(key);
 
@@ -2981,17 +2997,26 @@ async function translateAll(word, fromLang, preSeeded=[]){
      exact same word/from/to combination twice. */
   const preSeededLangs=new Set(preSeeded.map(p=>p.lang));
   const targets=[...TRANSLATE_TO].sort(()=>Math.random()-.5).filter(t=>t.lang!==fromLang&&t.lang!==from&&!preSeededLangs.has(t.lang));
-  const translations=await _translateBatch(word, from, targets);
   const norm=s=>s.toLowerCase().replace(/[\s.,;:!?…'"()\[\]\-]/g,'');
   const srcNorm=norm(word);
-  /* Filter: remove translations identical to source OR identical to each other */
-  const seen=new Set([srcNorm]);
-  const filtered=translations.filter(Boolean).filter(t=>{
-    const n=norm(t.word);
-    if(seen.has(n))return false;
-    seen.add(n);
-    return true;
-  });
+  /* Filter: remove translations identical to source OR identical to each
+     other — shared between the progress callback and the final return so
+     an in-progress snapshot and the eventually-cached result always agree
+     on what counts as a usable word. */
+  const dedupe=raw=>{
+    const seen=new Set([srcNorm]);
+    return raw.filter(Boolean).filter(t=>{
+      const n=norm(t.word);
+      if(seen.has(n))return false;
+      seen.add(n);
+      return true;
+    });
+  };
+  const translations=await _translateBatch(word, from, targets, 3, 700, onProgress ? soFar=>{
+    const soFarAll=results.concat(dedupe(soFar));
+    if(soFarAll.length>1) onProgress(soFarAll);
+  } : null);
+  const filtered=dedupe(translations);
   const all=results.concat(filtered);
   if(all.length>2)_transCache.set(key,all);
   return all;
@@ -4330,7 +4355,15 @@ async function loadMeta(item){
       }else{
         srcLang = 'en';
       }
-      const allWords = await translateAll(fullTitle, srcLang, preSeeded);
+      /* Progress callback: let snow start with whatever's landed so far
+         instead of waiting for the full ~87-language batch — see
+         translateAll()'s onProgress doc. Same "only the currently playing
+         track drives snow" guard as the final setSnowWords() call below
+         (a prefetching item resolving in the background must never steal
+         the live snow display from whatever's actually playing). */
+      const allWords = await translateAll(fullTitle, srcLang, preSeeded, soFar=>{
+        if(playingItem?.id===spotifyId) setSnowWords(soFar);
+      });
       if(!stillRelevant())return;
 
       /* 7: English + browser language for playlist trans slot */
@@ -6330,6 +6363,7 @@ function detectLoginStatus(){
   function onUpdate(e){
     const dur=(e.data?.duration??e.duration??0);
     if(dur>60000){
+      _consecutiveShortTracks=0; // any real full-length track breaks the streak, regardless of prior state
       if(!isLoggedIn){
         isLoggedIn=true;
         /* An EARLIER track could have already set _previewConfirmed=true below —
@@ -6352,14 +6386,31 @@ function detectLoginStatus(){
       }
       try{EC.removeListener('playback_update',onUpdate);}catch(_){}
     }else if(dur>0&&dur<=31000){
-      if(isLoggedIn){
-        isLoggedIn=false;
-        console.warn('Spotify login/session lost mid-playback (cookie cleared, logged out elsewhere?) — falling back to preview-only');
+      /* Same "one data point doesn't prove it" reasoning as the upgrade branch
+         above, applied to the downgrade direction too — a single short track
+         doesn't disprove being logged in either (real short songs/interludes
+         happen in a fully logged-in session same as any other). Only acting on
+         it immediately used to flip isLoggedIn/_previewConfirmed off the
+         instant one such track played, dropping artist/country cards and the
+         full-language snow for a genuinely logged-in session (reported live:
+         "TRANSLATE: ON" stayed green — the MyMemory health badge is a
+         separate signal, unrelated to this gate — while no snow ever
+         appeared). Require 2 short tracks in a row before treating it as
+         confirmed preview-mode, UNLESS we don't have a logged-in verdict to
+         protect yet (isLoggedIn already false) — a genuine mid-session logout
+         still gets caught within 2 tracks, since every track becomes a preview
+         once actually logged out, not just one. */
+      _consecutiveShortTracks++;
+      if(!isLoggedIn || _consecutiveShortTracks>=2){
+        if(isLoggedIn){
+          isLoggedIn=false;
+          console.warn('Spotify login/session lost mid-playback (cookie cleared, logged out elsewhere?) — falling back to preview-only');
+        }
+        // Preview mode confirmed
+        $('login-status').textContent='preview only';
+        $('login-status').style.color='var(--dim)';
+        _previewConfirmed=true;
       }
-      // Preview mode confirmed
-      $('login-status').textContent='preview only';
-      $('login-status').style.color='var(--dim)';
-      _previewConfirmed=true;
       try{EC.removeListener('playback_update',onUpdate);}catch(_){}
     }
   }
