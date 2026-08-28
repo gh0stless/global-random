@@ -591,6 +591,8 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 #give-site{font-size:.58em;color:var(--purple);letter-spacing:.04em}
 #give-desc{font-size:clamp(.55em,2vw,.65em);color:var(--dim);line-height:1.7;margin:0;text-align:center}
 #give-donate-btn:hover{filter:brightness(1.12)}
+#fullscreen-btn:hover{filter:brightness(1.12)}
+#fullscreen-btn.fs-active{background:#1d4ed8;box-shadow:inset 0 0 0 2px #93c5fd}
 
 /* ── "LEAVE THE MATRIX" welcome overlay ──
    Shown on every page load (see comment at _onWelcomeDismiss): this click
@@ -807,6 +809,9 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
     <a href="https://www.givedirectly.org/donate" target="_blank" rel="noopener" id="give-donate-btn"
        style="background:#e85d04;color:#fff;padding:12px 26px;border-radius:6px;text-decoration:none;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0">
     </a>
+    <button id="fullscreen-btn" type="button"
+       style="background:#3b82f6;color:#fff;padding:12px 26px;border-radius:6px;border:0;cursor:pointer;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0">
+    </button>
   </div>
 </div>
 <div id="we-footer-banner" style="display:none">
@@ -1091,7 +1096,7 @@ const _UI_EN={
   welcomeStep1:'Best experience on Desktop',
   welcomeStep2:'Open Spotify\u2019s website in another tab and log in — no Premium needed',
   welcomeStep3:'Then come back and make your choice',
-  welcomeStep4:'Press F11 for your browser\u2019s full screen',
+  welcomeStep4:'Use the \u26f6 Fullscreen button for the full experience (snow effect)',
   welcomeMobileHint:'Make your choice',
   labelGenre:'GENRE',
   labelDonate:'DONATE',
@@ -1099,7 +1104,8 @@ const _UI_EN={
   moreInfo:'More info',
   welcomePrivacy:"We don't process any cookies or store any data ourselves — for embedded services like Spotify, this can't be ruled out. By making your choice, you accept this. Imprint:",
   pillRedTitle:'Expand your consciousness through a new experience',
-  pillBlueTitle:'Everything stays as it is — go to Spotify'
+  pillBlueTitle:'Everything stays as it is — go to Spotify',
+  fullscreenBtn:'FULLSCREEN'
 };
 const _UI_DE={
   hint:'Für volle Tracks (Desktop): Spotify in einem anderen Tab öffnen und anmelden — kein Pro nötig. Auf dem Handy nur 30s Preview (Spotify-Einschränkung). Firefox: bei anhaltender Preview-Beschränkung erweiterten Trackingschutz für diese Seite deaktivieren.',
@@ -1116,7 +1122,7 @@ const _UI_DE={
   welcomeStep1:'Beste Erfahrung nur auf Desktop',
   welcomeStep2:'Spotify in einem anderen Tab öffnen und einloggen — kein Pro nötig',
   welcomeStep3:'Dann zurückkommen und deine Wahl treffen',
-  welcomeStep4:'F11 drücken für den Vollbildmodus deines Browsers',
+  welcomeStep4:'Nutze den ⛶ Vollbild-Button für die volle Erfahrung (Schneefall)',
   welcomeMobileHint:'Triff deine Wahl',
   labelGenre:'GENRE',
   labelDonate:'SPENDEN',
@@ -1124,7 +1130,8 @@ const _UI_DE={
   moreInfo:'Mehr Infos',
   welcomePrivacy:'Wir selbst verarbeiten keine Cookies oder Speicherdaten — bei eingebundenen Diensten wie Spotify lässt sich das nicht ausschließen. Mit deiner Auswahl akzeptierst du das. Impressum:',
   pillRedTitle:'Erweitere dein Bewusstsein durch neue Erfahrung',
-  pillBlueTitle:'Alles bleibt wie es war — geh zu Spotify'
+  pillBlueTitle:'Alles bleibt wie es war — geh zu Spotify',
+  fullscreenBtn:'VOLLBILD'
 };
 /* Apply EN immediately so UI isn't blank — async translation happens after myMemory is defined */
 $('hint-text').textContent=_UI_EN.hint;
@@ -1151,6 +1158,7 @@ $('hint-link').href='description.html';
 $('welcome-privacy-text').textContent=_UI_EN.welcomePrivacy;
 $('welcome-pill-title').textContent=_UI_EN.pillRedTitle;
 $('welcome-pill-blue-link').title=_UI_EN.pillBlueTitle;
+$('fullscreen-btn').textContent='⛶ '+_UI_EN.fullscreenBtn;
 async function localizeUI(){
   if(BROWSER_LANG==='de'){
     $('hint-text').textContent=_UI_DE.hint;
@@ -1177,6 +1185,7 @@ async function localizeUI(){
     $('welcome-privacy-text').textContent=_UI_DE.welcomePrivacy;
     $('welcome-pill-title').textContent=_UI_DE.pillRedTitle;
     $('welcome-pill-blue-link').title=_UI_DE.pillBlueTitle;
+    $('fullscreen-btn').textContent='⛶ '+_UI_DE.fullscreenBtn;
   } else if(BROWSER_LANG!=='en'){
     /* These 20 strings never change — caching them in localStorage means
        a RETURNING visitor in the same browser language skips all 20
@@ -1187,15 +1196,15 @@ async function localizeUI(){
        can invalidate old cached translations just by bumping the number
        again — otherwise a stale cached translation of the OLD English
        text would silently stick around forever after an edit here. */
-    const cacheKey=`gr_ui_i18n_v9_${BROWSER_LANG}`; // v9: added prt/pbt (welcome-pill tooltips) — v8-cached entries would just be missing them
+    const cacheKey=`gr_ui_i18n_v10_${BROWSER_LANG}`; // v10: added fsb (fullscreen button) — v9-cached entries would just be missing it
     let cached=null;
     try{ cached=JSON.parse(localStorage.getItem(cacheKey)); }catch(_){}
 
-    let hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt;
+    let hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt,fsb;
     if(cached){
-      ({hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt}=cached);
+      ({hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt,fsb}=cached);
     }else{
-      [hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt]=await Promise.all([
+      [hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt,fsb]=await Promise.all([
         myMemory(_UI_EN.hint,'en',BROWSER_LANG),
         myMemory(_UI_EN.giveDesc,'en',BROWSER_LANG),
         myMemory(_UI_EN.giveDonate.replace(' ↗',''),'en',BROWSER_LANG),
@@ -1218,14 +1227,15 @@ async function localizeUI(){
         myMemory(_UI_EN.welcomeMobileHint,'en',BROWSER_LANG),
         myMemory(_UI_EN.welcomePrivacy,'en',BROWSER_LANG),
         myMemory(_UI_EN.pillRedTitle,'en',BROWSER_LANG),
-        myMemory(_UI_EN.pillBlueTitle,'en',BROWSER_LANG)
+        myMemory(_UI_EN.pillBlueTitle,'en',BROWSER_LANG),
+        myMemory(_UI_EN.fullscreenBtn,'en',BROWSER_LANG)
       ]);
       /* Only cache if the batch actually mostly succeeded — a session
          where MyMemory was down/rate-limited would otherwise permanently
          cache a wall of nulls for this language, silently showing English
          forever after on every future visit even once the service is
          fine again. */
-      const results={hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt};
+      const results={hint,desc,btn,sl1,sl2,la,lc,ll,lf,lq,lp,lg,ld,llt,mi,ws1,ws2,ws3,ws4,wmh,wp,prt,pbt,fsb};
       if(Object.values(results).filter(Boolean).length>=16){
         try{ localStorage.setItem(cacheKey,JSON.stringify(results)); }catch(_){}
       }
@@ -1253,6 +1263,7 @@ async function localizeUI(){
     if(wp)   $('welcome-privacy-text').textContent=wp;
     if(prt)  $('welcome-pill-title').textContent=prt;
     if(pbt)  $('welcome-pill-blue-link').title=pbt;
+    if(fsb)  $('fullscreen-btn').textContent='⛶ '+fsb;
     // href stays 'description.html' — English fallback, since only DE/EN pages exist
   }
 }
@@ -2919,6 +2930,28 @@ async function myMemory(text,from,to){
 
 localizeUI();
 
+/* ── Fullscreen toggle ──
+   F11 (the OS/browser "kiosk" fullscreen) is invisible to the Fullscreen
+   API — document.fullscreenElement stays null no matter how long someone
+   sits in F11, since that toggle never goes through requestFullscreen().
+   This button calls the API directly instead, so its state is something
+   the rest of the app can actually rely on (see the isMobile||
+   _previewConfirmed guards in translateAll() — the mass-translate/snow
+   batch is gated on being in fullscreen the same way, now a 3rd condition
+   there). Both the Joomla and Nextcloud iframe wrappers already grant
+   allow="fullscreen" on their <iframe>, so requestFullscreen() works
+   identically there — confirmed against both manifests, not assumed. */
+$('fullscreen-btn').addEventListener('click',()=>{
+  if(document.fullscreenElement){
+    document.exitFullscreen().catch(()=>{});
+  }else{
+    document.documentElement.requestFullscreen().catch(()=>{});
+  }
+});
+document.addEventListener('fullscreenchange',()=>{
+  $('fullscreen-btn').classList.toggle('fs-active',!!document.fullscreenElement);
+});
+
 /* Translation cache — avoids re-translating same word (quota protection) */
 const _transCache=new Map();
 
@@ -2986,8 +3019,14 @@ async function translateAll(word, fromLang, preSeeded=[], onProgress=null){
      before the clip cuts out and the next random track starts anyway —
      see detectLoginStatus() for how _previewConfirmed gets set. Skip it
      entirely: same shape as the always-included "source word" entry
-     below, just without the expensive part. */
-  if(isMobile || _previewConfirmed) return [{word, color:'#ff79c6', lang:fromLang}];
+     below, just without the expensive part.
+     Same reasoning extended to fullscreen (Andreas' call): the falling
+     snow is the one part of this whole app that's genuinely wasted on a
+     small windowed view — checked live via document.fullscreenElement
+     (the #fullscreen-btn wired near localizeUI() above, NOT the F11 kiosk
+     toggle, which the Fullscreen API can't see at all) at the moment each
+     track starts, not re-evaluated mid-track. */
+  if(isMobile || _previewConfirmed || !document.fullscreenElement) return [{word, color:'#ff79c6', lang:fromLang}];
 
   const results=[{word, color:'#ff79c6', lang:fromLang}, ...preSeeded];
   const from=fromLang.startsWith('zh')?'zh-CN':fromLang;
