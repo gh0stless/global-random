@@ -585,21 +585,24 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 #we-footer-scroll-track.we-scroll-active{animation:we-scroll-left 31s linear forwards}
 @keyframes we-scroll-left{from{transform:translateX(var(--we-start-x,100%))}to{transform:translateX(var(--we-end-x,-100%))}}
 #give-inner{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
-/* Own flex item so #give-inner's wrap treats the two buttons as one unit —
-   without this, #give-inner's own flex-wrap could wrap #fullscreen-btn
-   onto its own new line below #give-donate-btn instead of staying next to
-   it, reported live. Wraps together with #give-left on narrow viewports
-   exactly like the single donate button already did, never splits from
-   its own sibling button. */
-#give-actions{display:flex;flex-direction:row;gap:12px;flex-shrink:0}
 #give-left{display:flex;flex-direction:column;align-items:center;gap:8px}
 #give-logo-link{text-decoration:none;display:flex;flex-direction:row;align-items:center;gap:8px}
 #give-logo{height:32px;width:auto}
 #give-site{font-size:.58em;color:var(--purple);letter-spacing:.04em}
 #give-desc{font-size:clamp(.55em,2vw,.65em);color:var(--dim);line-height:1.7;margin:0;text-align:center}
 #give-donate-btn:hover{filter:brightness(1.12)}
-#fullscreen-btn:hover{filter:brightness(1.12)}
-#fullscreen-btn.fs-active{background:#1d4ed8;box-shadow:inset 0 0 0 2px #93c5fd}
+/* Same footprint/border/color treatment as #theme-toggle right next to it —
+   icon-only (SVG, not a font glyph: the embedded C64 pixel font doesn't
+   cover ⛶/⤢-style Unicode expand symbols, confirmed live via screenshot
+   when an earlier version tried one). Two icons layered in the same slot,
+   toggled by .fs-active exactly like #theme-toggle swaps ☾/☀ — corners
+   pointing outward = "enter fullscreen", inward = "exit fullscreen". */
+#fullscreen-btn{background:transparent;border:1px solid var(--border);color:var(--dim);padding:4px 9px;border-radius:5px;cursor:pointer;width:auto;height:auto;line-height:1;display:inline-flex;align-items:center}
+#fullscreen-btn:hover{filter:brightness(1.4)}
+#fullscreen-btn svg{width:14px;height:14px;display:block}
+#fullscreen-btn .fs-icon-exit{display:none}
+#fullscreen-btn.fs-active .fs-icon-enter{display:none}
+#fullscreen-btn.fs-active .fs-icon-exit{display:block}
 
 /* ── "LEAVE THE MATRIX" welcome overlay ──
    Shown on every page load (see comment at _onWelcomeDismiss): this click
@@ -707,6 +710,15 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
 <header>
   <div style="position:relative;width:100%">
     <h1 style="margin:0">GLOBAL RANDOM</h1>
+    <button id="fullscreen-btn" type="button" aria-label="Fullscreen"
+      style="position:absolute;top:50%;right:46px;transform:translateY(-50%)">
+      <svg class="fs-icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 3 3 3 3 9"/><polyline points="15 3 21 3 21 9"/><polyline points="3 15 3 21 9 21"/><polyline points="21 15 21 21 15 21"/>
+      </svg>
+      <svg class="fs-icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 9 9 9 9 4"/><polyline points="20 9 15 9 15 4"/><polyline points="4 15 9 15 9 20"/><polyline points="20 15 15 15 15 20"/>
+      </svg>
+    </button>
     <button id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme"
       style="position:absolute;top:50%;right:10px;transform:translateY(-50%);background:transparent;border:1px solid var(--border);color:var(--dim);padding:4px 9px;font-size:.85em;border-radius:5px;cursor:pointer;width:auto;height:auto;letter-spacing:.05em;line-height:1">☾</button>
   </div>
@@ -813,14 +825,9 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
       </a>
       <p id="give-desc"></p>
     </div>
-    <div id="give-actions">
-      <a href="https://www.givedirectly.org/donate" target="_blank" rel="noopener" id="give-donate-btn"
-         style="background:#e85d04;color:#fff;padding:12px 26px;border-radius:6px;text-decoration:none;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0;box-sizing:border-box;width:auto;height:auto;line-height:normal;display:inline-block">
-      </a>
-      <button id="fullscreen-btn" type="button"
-         style="background:#3b82f6;color:#fff;padding:12px 26px;border-radius:6px;border:0;cursor:pointer;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0;box-sizing:border-box;width:auto;height:auto;line-height:normal;display:inline-block">
-      </button>
-    </div>
+    <a href="https://www.givedirectly.org/donate" target="_blank" rel="noopener" id="give-donate-btn"
+       style="background:#e85d04;color:#fff;padding:12px 26px;border-radius:6px;text-decoration:none;font-family:'Courier New',monospace;font-size:.78em;letter-spacing:.12em;white-space:nowrap;flex-shrink:0">
+    </a>
   </div>
 </div>
 <div id="we-footer-banner" style="display:none">
@@ -1167,7 +1174,7 @@ $('hint-link').href='description.html';
 $('welcome-privacy-text').textContent=_UI_EN.welcomePrivacy;
 $('welcome-pill-title').textContent=_UI_EN.pillRedTitle;
 $('welcome-pill-blue-link').title=_UI_EN.pillBlueTitle;
-$('fullscreen-btn').textContent=_UI_EN.fullscreenBtn;
+$('fullscreen-btn').title=_UI_EN.fullscreenBtn;
 async function localizeUI(){
   if(BROWSER_LANG==='de'){
     $('hint-text').textContent=_UI_DE.hint;
@@ -1194,7 +1201,7 @@ async function localizeUI(){
     $('welcome-privacy-text').textContent=_UI_DE.welcomePrivacy;
     $('welcome-pill-title').textContent=_UI_DE.pillRedTitle;
     $('welcome-pill-blue-link').title=_UI_DE.pillBlueTitle;
-    $('fullscreen-btn').textContent=_UI_DE.fullscreenBtn;
+    $('fullscreen-btn').title=_UI_DE.fullscreenBtn;
   } else if(BROWSER_LANG!=='en'){
     /* These 20 strings never change — caching them in localStorage means
        a RETURNING visitor in the same browser language skips all 20
@@ -1272,7 +1279,7 @@ async function localizeUI(){
     if(wp)   $('welcome-privacy-text').textContent=wp;
     if(prt)  $('welcome-pill-title').textContent=prt;
     if(pbt)  $('welcome-pill-blue-link').title=pbt;
-    if(fsb)  $('fullscreen-btn').textContent=fsb;
+    if(fsb)  $('fullscreen-btn').title=fsb;
     // href stays 'description.html' — English fallback, since only DE/EN pages exist
   }
 }
