@@ -4144,7 +4144,21 @@ function updatePlaylist(){
     wordEl.textContent=_s0.word||'';
     wordEl.style.color=_s0.color||'var(--text)';
     /* Split EN · DE → two lines via <br> */
-    const _t0=_s0.trans||_s0.info||'';
+    /* Used to fall back to _s0.info (flag/country/year) whenever no
+       translation existed yet — but that's the exact same information the
+       country/artist card (right column) already shows, just duplicated
+       here, and it only ever appeared for however long translation hadn't
+       resolved yet: _renderPlayingMeta() calls updatePlaylist() TWICE per
+       track (early, before translation — step 5 — and again once
+       translateAll() actually resolves — step 8), so this line visibly
+       flipped from the flag/info fallback to the real translation right
+       when translation finished, reading as if the flag/country/year
+       itself was "generated late" by translation, when it had really been
+       known since step 5 the whole time (reported live). Dropping the
+       fallback entirely: this line now simply stays blank until there's a
+       genuine translation to show, never repeating what the card below
+       already says. */
+    const _t0=_s0.trans||'';
     const transEl=p0.querySelector('.pl-trans');
     transEl.innerHTML = _t0.replace(' · ','<br>');
     /* Long titles (classical movement names etc.) wrap to multiple lines
@@ -4491,18 +4505,17 @@ async function loadMeta(item){
          (its very first line above) — for an English-language browser,
          where _bl above is unconditionally null (no second slot exists at
          all), that leaves item.trans as nothing but a word-for-word repeat
-         of item.word. .pl-word (the title itself) already shows that
-         exact text; the ONLY visible effect of also setting item.trans was
-         overwriting the more informative flag/country/year fallback
-         (_s0.info, see updatePlaylist()) with a second copy of the title
-         — reported live ("Concord" by Underworld, English browser).
-         Leaving item.trans empty here instead lets that fallback chain
-         show through, same as if translation had never resolved at all —
-         strictly more informative than a redundant duplicate. Does NOT
-         affect a genuinely foreign-language title (_en is a real English
-         translation there, not a copy of fullTitle) or any BROWSER_LANG
-         where _bl carries real content (including 'n/a' above, which is
-         deliberately truthy so this check leaves it alone). */
+         of item.word. .pl-word (the title itself) already shows that exact
+         text right above it, so setting item.trans to the same text again
+         is pure noise — reported live ("Concord" by Underworld, English
+         browser). Leaving item.trans empty here instead means .pl-trans
+         just stays blank (see updatePlaylist() — it no longer falls back
+         to anything else either), same as if translation had never
+         resolved at all. Does NOT affect a genuinely foreign-language
+         title (_en is a real English translation there, not a copy of
+         fullTitle) or any BROWSER_LANG where _bl carries real content
+         (including 'n/a' above, which is deliberately truthy so this
+         check leaves it alone). */
       const _norm=s=>(s||'').toLowerCase().replace(/[\s.,;:!?…'"()\[\]\-]/g,'');
       const _enIsJustTheTitle=_norm(_en)===_norm(fullTitle);
       item.trans=(_enIsJustTheTitle&&!_bl) ? '' : [_en,_bl].filter(Boolean).join(' · ');
