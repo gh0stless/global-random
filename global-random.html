@@ -4526,12 +4526,21 @@ async function loadMeta(item){
          for the other half, the startup probe) — fires for every resolved
          item, prefetch or currently-playing alike, so a change is reported
          as soon as it's detected rather than waiting for the next track to
-         actually start. Skipped on mobile/preview-only: there translateAll()
-         intentionally never runs the real batch (cost-saving, see its own
-         isMobile||_previewConfirmed guard) and always returns a length-1
-         result — that's a deliberate skip, not the service being down, and
-         reporting it as such would be a false alarm on every single track. */
-      if(!isMobile && !_previewConfirmed){
+         actually start. Skipped on mobile/preview-only/non-fullscreen: in
+         all three cases translateAll() intentionally never runs the real
+         batch (cost-saving on mobile/preview, screen-space-saving outside
+         fullscreen — see its own isMobile||_previewConfirmed||!fullscreen
+         guard) and always returns a length-1 result — that's a deliberate
+         skip, not the service being down. Missed this one when fullscreen
+         gating was added: the badge started reading "TRANSLATE: OFF" on
+         every track outside fullscreen even though MyMemory was perfectly
+         reachable (confirmed live: individual per-track translations —
+         step 7's EN/browser-language pair — worked fine the whole time,
+         since those aren't gated on fullscreen, only the ~87-language mass
+         batch is) — a false alarm on every single track, exactly the
+         failure mode this guard already existed to prevent for the other
+         two conditions. */
+      if(!isMobile && !_previewConfirmed && document.fullscreenElement){
         _reportTranslationHealth(item.allWords.length>1);
       }
 
