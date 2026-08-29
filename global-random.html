@@ -2977,7 +2977,48 @@ $('fullscreen-btn').addEventListener('click',()=>{
 });
 document.addEventListener('fullscreenchange',()=>{
   $('fullscreen-btn').classList.toggle('fs-active',!!document.fullscreenElement);
+  if(document.fullscreenElement){
+    _retryTranslationForCurrentTrack();
+  }else{
+    /* Leaving fullscreen mid-track: translateAll()'s own gate only checks
+       fullscreen state at the moment a NEW track starts, so without this,
+       snow that had already started would just keep falling until the
+       next random pick, even though the deliberate rule is "no snow
+       outside fullscreen". Same "no snow is more honest than snow that
+       shouldn't be there" principle already used at track transitions
+       (see playChosen()'s setSnowWords([])) — startSnow()'s own interval
+       already no-ops once currentSnowWords is empty, existing bubbles
+       just fade out on their own animation, nothing snaps away abruptly. */
+    currentSnowWords=[];
+  }
 });
+/* Toggling INTO fullscreen mid-track should retroactively fetch the mass
+   translation batch for whatever's already playing, not wait for the
+   NEXT random track to notice — translateAll()'s gate only checks
+   fullscreen state at the moment a track STARTS. A track that started
+   outside fullscreen has item.allWords stuck at the single-item
+   placeholder translateAll() returns when skipping (never cached — see
+   translateAll()'s own "only cache if length>2" line — so calling it
+   again here always genuinely retries, not a stale skip result). */
+async function _retryTranslationForCurrentTrack(){
+  const item=playingItem;
+  if(!item || isMobile || _previewConfirmed) return;
+  if(item.allWords && item.allWords.length>1) return; // already has a real batch, nothing to redo
+  /* Simplified re-detection, not the original probe-based srcLang logic
+     in loadMeta() (that spends a real MyMemory call to distinguish "title
+     already in the country's language" from "title is English") — good
+     enough for this retroactive, best-effort top-up rather than paying
+     for another probe call on every fullscreen toggle. */
+  const scriptLang=detectWordLang(item.word);
+  const cLang=item.countryCode&&COUNTRY_LANG[item.countryCode];
+  const srcLang = scriptLang!=='en' ? scriptLang : (cLang&&cLang!=='en' ? cLang : 'en');
+  const allWords=await translateAll(item.word, srcLang, [], soFar=>{
+    if(playingItem?.id===item.id) setSnowWords(soFar);
+  });
+  if(playingItem?.id!==item.id) return; // track changed while this was in flight
+  item.allWords=allWords;
+  if(allWords.length>1) setSnowWords(allWords);
+}
 
 /* Translation cache — avoids re-translating same word (quota protection) */
 const _transCache=new Map();
