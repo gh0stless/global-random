@@ -4480,7 +4480,25 @@ async function loadMeta(item){
          never even attempted (stayed null from its very first line) and
          should stay silently absent, same as before. */
       if(!_bl && BROWSER_LANG!=='en') _bl='n/a';
-      item.trans=[_en,_bl].filter(Boolean).join(' · ');
+      /* _en is a literal copy of fullTitle whenever srcLang is already 'en'
+         (its very first line above) — for an English-language browser,
+         where _bl above is unconditionally null (no second slot exists at
+         all), that leaves item.trans as nothing but a word-for-word repeat
+         of item.word. .pl-word (the title itself) already shows that
+         exact text; the ONLY visible effect of also setting item.trans was
+         overwriting the more informative flag/country/year fallback
+         (_s0.info, see updatePlaylist()) with a second copy of the title
+         — reported live ("Concord" by Underworld, English browser).
+         Leaving item.trans empty here instead lets that fallback chain
+         show through, same as if translation had never resolved at all —
+         strictly more informative than a redundant duplicate. Does NOT
+         affect a genuinely foreign-language title (_en is a real English
+         translation there, not a copy of fullTitle) or any BROWSER_LANG
+         where _bl carries real content (including 'n/a' above, which is
+         deliberately truthy so this check leaves it alone). */
+      const _norm=s=>(s||'').toLowerCase().replace(/[\s.,;:!?…'"()\[\]\-]/g,'');
+      const _enIsJustTheTitle=_norm(_en)===_norm(fullTitle);
+      item.trans=(_enIsJustTheTitle&&!_bl) ? '' : [_en,_bl].filter(Boolean).join(' · ');
       item.allWords=allWords;
       item._en=_en; // cached for termTrack() at render time
 
