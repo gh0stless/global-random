@@ -6219,12 +6219,26 @@ function _playWEIntro(){
     try{EC.play();}catch(_){}
   }else{
     (async()=>{
+      /* SKIP INTRO clicked immediately (within this 900ms delay, or during
+         a retry wait below) used to still end up playing the W:E track
+         anyway (reported live): finish() calls EC.pause() at click time,
+         but the embed usually hasn't loaded anything yet that early for
+         pause() to actually act on — a no-op, not a cancellation. This
+         fire-and-forget chain then reached its own delayed EC.play() call
+         regardless, moments later, with nothing checking whether SKIP had
+         already happened in the meantime. `done` (finish()'s own guard,
+         same closure) is the one flag that can tell: checked immediately
+         before every EC.play() attempt below, synchronously right up
+         against the call with no further await in between, so there's no
+         new window for the same race to reopen at the check itself. */
       async function tryPlay(ms=900){
+        if(done)return;
         try{EC.play();}
-        catch(e){ if(ms<4000){await sleep(ms);return tryPlay(ms*1.5);} }
+        catch(e){ if(ms<4000){await sleep(ms);if(done)return;return tryPlay(ms*1.5);} }
       }
       EC.loadUri(WE_INTRO_URI);
       await sleep(900);
+      if(done)return;
       await tryPlay();
     })();
   }
