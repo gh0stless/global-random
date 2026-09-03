@@ -5652,8 +5652,22 @@ function _queueItem(chosen, tag){
      gets reordered by later splices elsewhere. */
   const takenSlots=new Set(queue.map(q=>q.slot));
   let slot=0; while(takenSlots.has(slot) && slot<3) slot++;
+  /* Provisional display name from the country CODE discovery already
+     resolved — cheap, local, no network call (CAPITALS/COUNTRY_NAME_DICTS
+     lookups, same helper loadCountryInfo() already uses for the LAND
+     card). Small patch worth making: item.country (the flag+name t-meta
+     shows) otherwise stays unset until loadMeta()'s own MB area-name
+     lookup succeeds, and that whole chain can fail outright (a MusicBrainz
+     503 on step 1 alone, reported live) without ever reaching it - even
+     though the country CODE, and therefore a perfectly good name for it,
+     was sitting right here the entire time. loadMeta() still overwrites
+     this with MB's own (occasionally more specific, e.g. a sub-national
+     area name) result once/if it succeeds — this is only what shows in
+     the meantime, same backfill spirit as the rest of this pipeline. */
   const item={id:chosen.id,word:chosen.word,color,info:'',trans:'',title:chosen.title,
-              allWords:null,countryCode:chosen.code,recId:chosen.recId,slot};
+              allWords:null,countryCode:chosen.code,
+              country:chosen.code?_countryDisplayName(chosen.code,BROWSER_LANG||'en'):'',
+              recId:chosen.recId,slot};
   queue.push(item);
   /* Sync the preview widget for this slot FIRST, before any of the render calls below that
      could throw (e.g. updateFlagBar() on an unexpected country code) — otherwise the item is
