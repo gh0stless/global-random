@@ -2662,7 +2662,7 @@ window.onSpotifyIframeApiReady=IFrameAPI=>{
    slot empties, stays empty, and later gets refilled by the specific
    new item _queueItem() assigns that same slot number to — regardless
    of where either item lives in the array. */
-let _prevUri=[null,null,null];
+let _prevUri=[undefined,undefined,undefined]; // undefined (not null) so the very first sync always runs and marks empty slots as empty
 function _syncPreviewSlots(){
   const ecs=[ECPreview1,ECPreview2,ECPreview3];
   for(let i=0;i<3;i++){
