@@ -5493,6 +5493,12 @@ function _checkQueueConsistency(){
   }
   if(filledPreview!==queue.length){
     console.warn(`[consistency] queue.length=${queue.length} but ${filledPreview}/3 preview slots are non-empty`);
+    /* Self-heal: the DOM only gets resynced at fixed points (after the dice
+       animation, after tryPlay()), so a queue that drains without a following
+       sync leaves stale preview cards on screen indefinitely. _syncPreviewSlots()
+       is idempotent — it only touches a slot whose URI actually changed — so
+       calling it here when the two sources disagree is safe. */
+    _syncPreviewSlots();
   }
   const bar=$('queue-bar');
   if(bar){
