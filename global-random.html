@@ -873,14 +873,10 @@ const MYMEMORY_EMAIL='info@crazy-midi.de';
    the underlying catalog is larger). So several layers correct for this
    without making the draw "curated":
 
-   1. GROWING SEARCH WINDOW — mbRandomSearch() starts narrow (offsets
-      0–199) while the pool holds fewer than MB_WIDE_AT (20) candidates.
-      From then on every 4th call also draws from the full offset range,
-      whose ceiling starts at 600k (a safe margin below the confirmed
-      ~650k edge) and quietly expands toward that edge (probing past the
-      current edge every few wide calls). A longer-running session
-      genuinely explores the last stretch of reachable depth, not just
-      re-samples the same slice.
+   1. SEARCH WINDOW — mbRandomSearch() draws a random offset 0..491 with
+      limit=9 (MB answers only offset+limit <= 500), so every draw is a
+      random pick from the first 500 ranked results of the Spotify-track
+      query.
 
    2. PER-COUNTRY CAP + FIFO — each country can hold at most CAP candidates
       in the pool at once (~20% of POOL_TARGET). Once full, a NEW find
@@ -2786,66 +2782,23 @@ async function resolveCountryViaWikiBio(artistId){
 }
 
 /* Search for tracks BY COUNTRY via artist filter */
-/* Global random search across entire MB — offset varies per call.
-   The search shape only usefully reaches ~650k deep (empirically confirmed,
-   see below) regardless of how much larger MB's overall catalog is —
-   so we start by sampling offset 0-600k, already the vast majority of
-   that reachable range. The ceiling still grows toward the confirmed
-   edge over a session: every few calls we probe a bit further out, and
-   if MB still returns results there, the ceiling moves — squeezing out
-   the last stretch for future random draws. */
-/* Empirically confirmed via a dedicated offset-ceiling test tool (2026):
-   this exact query shape (unquoted "open.spotify.com/track") returns
-   results up to ~650,000 and goes empty shortly after — that's the real
-   practical depth of this search shape, not the ~17M raw Spotify-linked
-   entries MB may hold overall. Starting at 600,000 (safe margin below the
-   confirmed edge) instead of a conservative 100,000 means random draws
-   sample the genuinely reachable range from session start, rather than
-   needing many successful probes over a long session to grow into it.
-   Note: only the first of the three query variants below was tested this
-   way — the other two (phrase/field-qualified syntax) could in principle
-   have a different ceiling, since Lucene parses them differently; they're
-   only reached as a fallback when the first returns nothing. */
-let _mbOffsetCeiling=600000;   // current confirmed-reachable ceiling
-let _mbSearchCalls=0;
-let _mbWideCalls=0;
-let _mbWideAnnounced=false;
-/* Startphase (pool below MB_WIDE_AT candidates): only small offsets, so MB
-   sees almost no load and practically never answers 400/503. Once the pool
-   reaches MB_WIDE_AT, every 4th call additionally draws from the full
-   confirmed range (the growing-ceiling logic below); the other calls stay
-   narrow. */
-const MB_WIDE_AT=20;
-const MB_NARROW_MAX=200;
+/* Global random search across MB. MB only answers offset+limit <= 500:
+   verified 04.10.2026 — 200 for offset+limit <= 500, 400 above, the same
+   every time. So offsets are drawn from 0..491 with limit=9, i.e. the first
+   500 ranked results of this query. Nothing deeper is reachable with this
+   endpoint. */
+const MB_LIMIT=9;
+const MB_MAX_OFFSET=500-MB_LIMIT; // 491
 async function mbRandomSearch(){
   const variants=['open.spotify.com/track','"open.spotify.com/track"','url:("open.spotify.com/track")'];
-  _mbSearchCalls++;
-  const wideOn = candidates.length>=MB_WIDE_AT;
-  if(wideOn && !_mbWideAnnounced){
-    _mbWideAnnounced=true;
-    console.log(`%c[mb] pool ${candidates.length} ≥ ${MB_WIDE_AT} — wide search mixed in (every 4th call)`,'color:#00ff41;font-weight:bold');
-  }
-  const wide = wideOn && (_mbSearchCalls%4===0);
-  /* Wide calls: every 4th wide call probes past the current ceiling instead
-     of a random draw inside it. Success → ceiling grows. Empty → stay put. */
-  if(wide) _mbWideCalls++;
-  const probing = wide && (_mbWideCalls%4===0);
-  const offset = probing
-    ? _mbOffsetCeiling + Math.floor(Math.random()*50000)
-    : wide
-      ? Math.floor(Math.random()*_mbOffsetCeiling)
-      : Math.floor(Math.random()*MB_NARROW_MAX);
+  const offset=Math.floor(Math.random()*(MB_MAX_OFFSET+1));
   for(const q of variants){
     const data=await mbFetch(
-      `https://musicbrainz.org/ws/2/url?query=${encodeURIComponent(q)}&limit=9&offset=${offset}&fmt=json`
+      `https://musicbrainz.org/ws/2/url?query=${encodeURIComponent(q)}&limit=${MB_LIMIT}&offset=${offset}&fmt=json`
     );
     const urls=(data.urls??[]).filter(u=>u.resource?.includes('open.spotify.com/track/'));
     if(!urls.length)continue;
-    if(probing && offset+9>_mbOffsetCeiling){
-      _mbOffsetCeiling=offset+9;
-      console.log(`%c[mb] offset ceiling expanded to ${_mbOffsetCeiling.toLocaleString()}`,'color:#00ff41;font-weight:bold');
-    }
-    /* Deliberately NOT shuffled (used to be — removed). discoverCandidates()
+        /* Deliberately NOT shuffled (used to be — removed). discoverCandidates()
        consumes this buffer in order and bails early after
        BATCH_ABANDON_THRESHOLD consecutive "already used this country/artist/
        release in this batch" hits, exactly because MB's own natural result
@@ -2862,16 +2815,14 @@ async function mbRandomSearch(){
        promoteFromPool(), the session cap, and the second random draw at
        play time (see the big ALGORITHM comment above). A discarded
        batch remainder isn't "lost" either — the next fetch pulls a fresh,
-       independent random offset from the same 600k+ range, equally likely
+       independent random offset from the same 0..491 range, equally likely
        to be interesting; abandoning early just means more independent
        draws for the same API budget, not fewer good ones. */
-    if(wide) console.log(`%c[mb] wide ✓ offset ${offset.toLocaleString()} → ${urls.length} Treffer${probing?' (probe)':''}`,'color:#00ff41;font-weight:bold');
     return urls.map(u=>({
       id:u.resource.split('/track/')[1]?.split('?')[0],
       urlMbid:u.id
     })).filter(u=>u.id);
   }
-  if(wide) console.log(`%c[mb] wide ✗ offset ${offset.toLocaleString()} → keine Treffer${probing?' (probe)':''}`,'color:#666');
   return [];
 }
 
@@ -5090,7 +5041,7 @@ function detectSilentTrack(itemId){
 /* ── Search engine ──
    ALGORITHM OVERVIEW (as of the current design):
    1. mbRandomSearch() pulls 9 random Spotify-linked URLs from MusicBrainz
-      per fetch (offset grows over the session — see mbRandomSearch()).
+      per fetch (random offset 0..491 — see mbRandomSearch()).
    2. Each URL is resolved: URL → recording → artist → country (with a
       Wikipedia-bio demonym fallback if MB's own country/area field is empty
       — see resolveCountryViaWikiBio()).
