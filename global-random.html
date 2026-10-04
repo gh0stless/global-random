@@ -873,12 +873,14 @@ const MYMEMORY_EMAIL='info@crazy-midi.de';
    the underlying catalog is larger). So several layers correct for this
    without making the draw "curated":
 
-   1. GROWING SEARCH WINDOW — mbRandomSearch()'s offset ceiling starts at
-      600k (a safe margin below the confirmed ~650k edge) and quietly
-      expands toward that edge over the session (probing past the current
-      edge every few calls). A longer-running session genuinely explores
-      the last stretch of reachable depth, not just re-samples the same
-      slice.
+   1. GROWING SEARCH WINDOW — mbRandomSearch() starts narrow (offsets
+      0–199) while the pool holds fewer than MB_WIDE_AT (20) candidates.
+      From then on every 4th call also draws from the full offset range,
+      whose ceiling starts at 600k (a safe margin below the confirmed
+      ~650k edge) and quietly expands toward that edge (probing past the
+      current edge every few wide calls). A longer-running session
+      genuinely explores the last stretch of reachable depth, not just
+      re-samples the same slice.
 
    2. PER-COUNTRY CAP + FIFO — each country can hold at most CAP candidates
       in the pool at once (~20% of POOL_TARGET). Once full, a NEW find
@@ -2806,15 +2808,33 @@ async function resolveCountryViaWikiBio(artistId){
    only reached as a fallback when the first returns nothing. */
 let _mbOffsetCeiling=600000;   // current confirmed-reachable ceiling
 let _mbSearchCalls=0;
+let _mbWideCalls=0;
+let _mbWideAnnounced=false;
+/* Startphase (pool below MB_WIDE_AT candidates): only small offsets, so MB
+   sees almost no load and practically never answers 400/503. Once the pool
+   reaches MB_WIDE_AT, every 4th call additionally draws from the full
+   confirmed range (the growing-ceiling logic below); the other calls stay
+   narrow. */
+const MB_WIDE_AT=20;
+const MB_NARROW_MAX=200;
 async function mbRandomSearch(){
   const variants=['open.spotify.com/track','"open.spotify.com/track"','url:("open.spotify.com/track")'];
   _mbSearchCalls++;
-  /* Every 4th call: probe past the current ceiling instead of a random draw
-     inside it. Success → ceiling grows. Empty → stay put, try again later. */
-  const probing = (_mbSearchCalls%4===0);
+  const wideOn = candidates.length>=MB_WIDE_AT;
+  if(wideOn && !_mbWideAnnounced){
+    _mbWideAnnounced=true;
+    console.log(`%c[mb] pool ${candidates.length} ≥ ${MB_WIDE_AT} — wide search mixed in (every 4th call)`,'color:#00ff41;font-weight:bold');
+  }
+  const wide = wideOn && (_mbSearchCalls%4===0);
+  /* Wide calls: every 4th wide call probes past the current ceiling instead
+     of a random draw inside it. Success → ceiling grows. Empty → stay put. */
+  if(wide) _mbWideCalls++;
+  const probing = wide && (_mbWideCalls%4===0);
   const offset = probing
     ? _mbOffsetCeiling + Math.floor(Math.random()*50000)
-    : Math.floor(Math.random()*_mbOffsetCeiling);
+    : wide
+      ? Math.floor(Math.random()*_mbOffsetCeiling)
+      : Math.floor(Math.random()*MB_NARROW_MAX);
   for(const q of variants){
     const data=await mbFetch(
       `https://musicbrainz.org/ws/2/url?query=${encodeURIComponent(q)}&limit=9&offset=${offset}&fmt=json`
