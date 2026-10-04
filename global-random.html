@@ -2865,11 +2865,13 @@ async function mbRandomSearch(){
        independent random offset from the same 600k+ range, equally likely
        to be interesting; abandoning early just means more independent
        draws for the same API budget, not fewer good ones. */
+    if(wide) console.log(`%c[mb] wide ✓ offset ${offset.toLocaleString()} → ${urls.length} Treffer${probing?' (probe)':''}`,'color:#00ff41;font-weight:bold');
     return urls.map(u=>({
       id:u.resource.split('/track/')[1]?.split('?')[0],
       urlMbid:u.id
     })).filter(u=>u.id);
   }
+  if(wide) console.log(`%c[mb] wide ✗ offset ${offset.toLocaleString()} → keine Treffer${probing?' (probe)':''}`,'color:#666');
   return [];
 }
 
