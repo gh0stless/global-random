@@ -5449,9 +5449,32 @@ async function discoverCandidates(){
    at whatever it reached after the last one-off promoteFromPool() trigger
    (app start, or after a track finishes) — no PLAY button ever appears
    even though plenty of countries are sitting ready in the pool. */
+const _appLoadedAt=Date.now();
+const DISCOVERY_WARMUP_MS=60000; // first minute: full speed, every tick
+const DISCOVERY_IDLE_EVERY_N_TICKS=6; // after that: one in every 6 ticks (~60s)
+/* allCountriesCapped() realistically never goes fully true — a handful of
+   territories (Nauru: 2 MB artists total, Tuvalu: 2, Micronesia: 2...)
+   structurally can't reach CAP=6, no matter how long this runs. Under MB
+   that cost nothing extra: each candidate took a rate-limited ~1.3s call
+   that mostly failed anyway (see HANDOVER — MB's search caps at
+   offset+limit<=500), so discoverCandidates() rarely got far into its
+   80-batch budget before giving up or running out of time between ticks.
+   Reported live once discovery moved to our own ~150ms endpoint (see
+   grRandomSearch()): with nothing left to slow it down, this ran its full
+   budget every single 10s tick, indefinitely — real, visible overhead
+   against our own server for countries that can never fill anyway. First
+   minute stays at full speed (that's the fast pool-fill users actually see
+   and want); after that, only every 6th tick actually calls
+   discoverCandidates() — still eventually fills the unlikely ones, just
+   nowhere near as often. promoteFromPool()/_checkQueueConsistency() keep
+   running every 10s regardless — purely local, no server cost either way. */
+let _heartbeatTicks=0;
 setInterval(()=>{
   if(_userStopped) return; // STOP was pressed — wait for the next explicit PLAY click
-  if(!engineRunning && !allCountriesCapped()) discoverCandidates();
+  _heartbeatTicks++;
+  const warmedUp=(Date.now()-_appLoadedAt)>=DISCOVERY_WARMUP_MS;
+  const dueThisTick=!warmedUp || (_heartbeatTicks%DISCOVERY_IDLE_EVERY_N_TICKS===0);
+  if(dueThisTick && !engineRunning && !allCountriesCapped()) discoverCandidates();
   if(queue.length<BUFFER_SIZE && candidates.length>0) promoteFromPool();
   _checkQueueConsistency();
 }, 10000);
