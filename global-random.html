@@ -924,10 +924,10 @@ const MYMEMORY_EMAIL='info@crazy-midi.de';
    ALGORITHM — high-level pipeline
    ══════════════════════════════════════════════════════════════════
    discoverCandidates() [background, runs continuously]
-     → mbRandomSearch(): fetch 9 random Spotify-linked URLs from MB
-     → resolve each: URL → recording → artist → country
-         (MB's own country/area field, else Wikipedia-bio demonym fallback
-          via resolveCountryViaWikiBio() — see that function's own comment)
+     → grRandomSearch(): fetch 9 random Spotify-linked tracks from our own
+       random-track.php endpoint (title/artist/country already resolved —
+       see mbRandomSearch()'s superseded-since comment for why this isn't
+       MusicBrainz's own search anymore)
      → batch dedup (country + artist) → cap/FIFO → push into pool
      → repeats until every country is at cap OR a per-call batch budget
        (MAX_BATCHES_PER_RUN) is spent; re-triggered by track changes and a
@@ -2781,12 +2781,54 @@ async function resolveCountryViaWikiBio(artistId){
   return null;
 }
 
+/* Primary discovery source since 12.10.2026: our own endpoint, backed by a
+   MusicBrainz database mirror we run ourselves (see HANDOVER/memory for
+   why — MB's own search caps at offset+limit<=500, see mbRandomSearch()
+   below, which made the reachable pool shrink to ~500 tracks total and
+   produced audible repeats within 2-3h of listening). random-track.php
+   already resolves title/artist/country server-side (same data MB itself
+   would have given us, just pre-joined), so discoverCandidates() can skip
+   the 3-call MB resolution chain entirely for candidates from here — see
+   the branch on f.title there. Same-origin relative URL on purpose: works
+   under both crazy-midi.de/global-random/ and global-random.radio without
+   a CORS header, since both serve this same file from the same account. */
+/* Resolves where random-track.php actually lives, for the three different
+   deployments this same file ends up in:
+   - crazy-midi.de FTP + global-random.radio (alias of the same docroot):
+     the file is a real sibling on the same host → plain relative path.
+   - Joomla wrapper (also crazy-midi.de, but served through a PHP route
+     that ISN'T physically inside global-random/) → window.GR_API_BASE,
+     injected at runtime by RawView.php, same pattern as its #hint-link
+     fix. Checked first so it always wins when present.
+   - Nextcloud (a different host entirely, HAL2024/DuckDNS) → genuinely
+     cross-origin from crazy-midi.de, no server-side injection point
+     available there (static file, no PHP wrapper) → falls back to the
+     known production URL. random-track.php sends an open CORS header for
+     exactly this case (public, non-sensitive music metadata). */
+function _grApiBase(){
+  if(window.GR_API_BASE!==undefined) return window.GR_API_BASE;
+  if(/^(crazy-midi\.de|global-random\.radio)$/.test(location.hostname)) return '';
+  return 'https://crazy-midi.de/global-random/';
+}
+async function grRandomSearch(){
+  try{
+    const res=await fetch(`${_grApiBase()}random-track.php?n=9`);
+    if(!res.ok) return [];
+    const data=await res.json();
+    return Array.isArray(data) ? data : [];
+  }catch(e){
+    return [];
+  }
+}
+
 /* Search for tracks BY COUNTRY via artist filter */
-/* Global random search across MB. MB only answers offset+limit <= 500:
-   verified 04.10.2026 — 200 for offset+limit <= 500, 400 above, the same
-   every time. So offsets are drawn from 0..491 with limit=9, i.e. the first
-   500 ranked results of this query. Nothing deeper is reachable with this
-   endpoint. */
+/* Superseded by grRandomSearch() above (12.10.2026) — kept only as a
+   fallback reference, not called from anywhere anymore. MB only answers
+   offset+limit <= 500: verified 04.10.2026 — 200 for offset+limit <= 500,
+   400 above, the same every time. So offsets are drawn from 0..491 with
+   limit=9, i.e. the first 500 ranked results of this query. Nothing
+   deeper is reachable with this endpoint — the real reason this stopped
+   being usable as the live source. */
 const MB_LIMIT=9;
 const MB_MAX_OFFSET=500-MB_LIMIT; // 491
 async function mbRandomSearch(){
@@ -5040,11 +5082,12 @@ function detectSilentTrack(itemId){
 
 /* ── Search engine ──
    ALGORITHM OVERVIEW (as of the current design):
-   1. mbRandomSearch() pulls 9 random Spotify-linked URLs from MusicBrainz
-      per fetch (random offset 0..491 — see mbRandomSearch()).
-   2. Each URL is resolved: URL → recording → artist → country (with a
-      Wikipedia-bio demonym fallback if MB's own country/area field is empty
-      — see resolveCountryViaWikiBio()).
+   1. grRandomSearch() pulls 9 random Spotify-linked tracks per fetch from
+      random-track.php, our own endpoint backed by a MusicBrainz mirror we
+      run ourselves (replaces mbRandomSearch(), kept below only as a
+      reference for why MB's own search stopped being viable).
+   2. Title/artist/country already come resolved from that endpoint — no
+      per-candidate MB round trip or Wikipedia-bio fallback needed anymore.
    3. Per-batch dedup: max 1 candidate per country AND max 1 per artist per
       25-item batch, to stop bulk-imports (e.g. a whole symphony box set)
       from flooding several pool slots at once. 3 consecutive same-country
@@ -5119,13 +5162,15 @@ async function discoverCandidates(){
      bulk-catalogued release flood multiple slots in the SAME batch" —
      same spirit as _batchCountriesUsed. */
   let _batchReleasesUsed=new Set();
-  /* Each resolve (URL→recording→artist) costs 3 serial, rate-limited MB
-     calls — but we only find out the country AFTER paying that cost. If a
-     batch turns out to be a homogeneous bulk import (e.g. 25x RU in a row),
-     grinding through all 25 wastes ~75 calls for maybe 1-2 usable finds.
-     So: once we see several consecutive "already used this batch" hits,
-     that's a strong signal the rest of the buffer is more of the same —
-     abandon it and fetch a fresh batch instead of resolving the remainder. */
+  /* Historical note (pre-12.10.2026): each resolve used to cost 3 serial,
+     rate-limited MB calls (URL→recording→artist), with the country only
+     known AFTER paying that cost — hence the abandon-early logic below.
+     Since the switch to grRandomSearch() (our own mirror, see there),
+     resolving a candidate is a free local array shift, no network call at
+     all. Keeping the abandon-threshold logic anyway: a bulk-import-style
+     clump landing in one 9-item response is unlikely but not impossible,
+     and bailing early here costs nothing now, so there's no reason to
+     remove a safety net that used to matter more. */
   let _consecutiveBatchSkips=0;
   const BATCH_ABANDON_THRESHOLD=3;
   /* Hard cap on ACCEPTED candidates per batch, independent of the per-
@@ -5176,7 +5221,7 @@ async function discoverCandidates(){
         {
           /* Refill buffer only when empty — 1 fetch = 9 candidates to resolve */
           if(!_urlBuf.length){
-            _urlBuf=await mbRandomSearch();
+            _urlBuf=await grRandomSearch();
             _batchCounter++;
             _batchesThisRun++;
             console.log(`%c[batch #${_batchCounter}] fetched ${_urlBuf.length} candidates (will accept up to ${MAX_ACCEPTED_PER_BATCH})`,'color:#0891b2;font-weight:bold');
@@ -5188,56 +5233,19 @@ async function discoverCandidates(){
           }
           const f=_urlBuf.shift();
           if(!f || played.has(f.id) || candidates.some(c=>c.id===f.id)) continue;
-          const urlData = await mbFetch(
-            `https://musicbrainz.org/ws/2/url/${f.urlMbid}?inc=recording-rels&fmt=json`
-          );
-          const recRel = (urlData.relations??[]).find(r=>r.recording?.title);
-          if(!recRel) continue;
-          /* +releases costs nothing extra — same request, MusicBrainz just
-             includes more fields in the response. Lets us catch "two
-             different recording IDs, same underlying release" duplicates
-             (the exact case reported: same cover art, same album, showing
-             up together early in the queue) without a second API round
-             trip per candidate. */
-          const rd = await mbFetch(
-            `https://musicbrainz.org/ws/2/recording/${recRel.recording.id}?inc=artist-credits+releases&fmt=json`
-          );
-          const aId = rd['artist-credit']?.[0]?.artist?.id;
-          let cCode = null;
-          if(aId){
-            try{
-              const ar = await mbFetch(`https://musicbrainz.org/ws/2/artist/${aId}?fmt=json`);
-              /* Same fallback chain as loadMeta — country field is unreliable, try begin-area/area too */
-              cCode = ar.country
-                ?? ar['begin-area']?.['iso-3166-1-codes']?.[0]
-                ?? ar.area?.['iso-3166-1-codes']?.[0]
-                ?? null;
-              if(cCode && !isRealCountryCode(cCode)) cCode=null; // e.g. XW "[Worldwide]" → treat as unknown
-            }catch(e){}
-          }
-          /* Own artist record has no country → follow MBID to Wikipedia bio,
-             scan for a nationality demonym ("American", "German singer"...) */
-          if(!cCode && aId){
-            cCode = await resolveCountryViaWikiBio(aId);
-            /* Same whitelist check as the direct MB path above — this path
-               was skipping it, which let non-193 codes (e.g. TW, handled
-               separately as a special case, not a UN member) slip into
-               countryStacks. That grows the flag bar's slot count over the
-               session, which changes the left column's height each time —
-               the periodic "jump" this was reported as. */
-            if(cCode && !isRealCountryCode(cCode)) cCode=null;
-          }
-          found = {id:f.id, title:rd.title||recRel.recording.title, recId:recRel.recording.id,
-                   artist:rd['artist-credit']?.[0]?.artist?.name||'',
-                   release:rd.releases?.[0]?.title||null};
-          /* Final whitelist check, independent of the per-source checks
-             above — a last line of defense so no non-193 code can ever
-             reach countryStacks, no matter how many resolution paths this
-             function ends up growing in the future or whether one of them
-             is missed. Growing countryStacks beyond the fixed 194 flag
-             slots is what caused the flag bar (and the whole left column)
-             to change height mid-session — the reported periodic "jump". */
-          code = (cCode && isRealCountryCode(cCode)) ? cCode : null;
+          /* grRandomSearch() already resolved title/artist/country server-
+             side (same gr_tracks row the SQL export built from our own MB
+             mirror) — no per-candidate MB round trip needed anymore. No
+             recId (we don't export MB recording MBIDs into gr_tracks) and
+             no release (release-level dedup below just never fires for
+             this source, which is fine: unlike a single MB search offset,
+             our server already draws independently per request, so the
+             "whole box set landed in one batch" clustering this guarded
+             against barely applies here). Every row in gr_tracks has a
+             non-null country (the export's WHERE clause required it), so
+             there's no Wikipedia-bio fallback step to run either. */
+          found = {id:f.id, title:f.title, recId:null, artist:f.artist||'', release:null};
+          code = (f.country && isRealCountryCode(f.country)) ? f.country : null;
         }
 
         /* Max 1 candidate per country per batch — stops bulk-import clumping
