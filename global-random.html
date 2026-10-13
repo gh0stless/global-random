@@ -5154,8 +5154,27 @@ let _batchCounter=0; // session-wide, survives across discoverCandidates() resta
    progressing. 20 ≈ roughly an hour of music (Andreas's estimate) — easy
    to adjust if it turns out too eager or too stingy in practice. */
 const POOL_WELL_STOCKED=20;
+/* Reported live 13.10.2026: netcup briefly rate-limited the account after
+   heavy skip-testing. Root cause: searchEngine() and the confirmed-
+   playback handler BOTH call discoverCandidates() on every track change,
+   completely unthrottled — only the 10s heartbeat got a cooldown earlier
+   (see DISCOVERY_WARMUP_MS above). Before today's COUNTRIES prune,
+   allCountriesCapped() could structurally never go true, so every single
+   track change — including rapid manual skips — re-ran the full discovery
+   loop (up to 80 requests to random-track.php) regardless of how recently
+   the last one ran. The prune should mostly fix this on its own (a fully
+   capped, all-real pool makes allCountriesCapped() actually go true and
+   stay true), but a skip-happy session can still outrun a cold pool before
+   it's capped. This minimum-gap guard is the actual fix, independent of
+   pool state: no matter which of the three call sites fires, or how many
+   fire in a burst, at most one discovery run can actually start per
+   DISCOVERY_MIN_GAP_MS. */
+let _lastDiscoveryStartedAt=0;
+const DISCOVERY_MIN_GAP_MS=10000;
 async function discoverCandidates(){
   if(engineRunning)return;
+  if(Date.now()-_lastDiscoveryStartedAt<DISCOVERY_MIN_GAP_MS)return;
+  _lastDiscoveryStartedAt=Date.now();
   if(document.hidden && candidates.length>=POOL_WELL_STOCKED){
     console.log(`%c[discovery] paused while hidden — pool already well-stocked (${candidates.length} candidates)`,'color:#999');
     return;
