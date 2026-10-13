@@ -5492,7 +5492,11 @@ async function discoverCandidates(){
    (app start, or after a track finishes) — no PLAY button ever appears
    even though plenty of countries are sitting ready in the pool. */
 const _appLoadedAt=Date.now();
-const DISCOVERY_WARMUP_MS=60000; // first minute: full speed, every tick
+/* Doubled to 2 minutes 13.10.2026: reported live, almost every country
+   (190 minus 1-2 stragglers) was already found within the first minute
+   — giving the full-speed window a bit more room lets those last few
+   stragglers get caught too, before throttling down. */
+const DISCOVERY_WARMUP_MS=120000; // first two minutes: full speed, every tick
 const DISCOVERY_IDLE_EVERY_N_TICKS=6; // after that: one in every 6 ticks (~60s)
 /* allCountriesCapped() realistically never goes fully true — a handful of
    territories (Nauru: 2 MB artists total, Tuvalu: 2, Micronesia: 2...)
