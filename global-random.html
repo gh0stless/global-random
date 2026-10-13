@@ -87,7 +87,7 @@ main,#fixed-footer{position:relative;z-index:1;max-width:640px;margin:0 auto;pad
    #col-right) inside flex containers — NOT CSS Grid with shared row
    numbers. Grid rows are shared in height across columns, so a tall
    left-column element (the flag bar wrapping to many rows once it holds
-   247 flags) would drag the whole row taller and leave a matching gap on
+   190 flags) would drag the whole row taller and leave a matching gap on
    the right — exactly the bug this replaced. Flexbox columns have no such
    coupling: each side just stacks its own children in normal block flow,
    completely independent of the other side's height. footer/give-banner/
@@ -123,7 +123,7 @@ main,#fixed-footer{position:relative;z-index:1;max-width:640px;margin:0 auto;pad
    - Preview stack (the 3 dimmed upcoming-track embeds): desktop-only,
      see original note below — mobile stays at exactly 1 visible player.
    - Matrix 1 ("we are one nation", the full undiscovered-country grid,
-     247 flags) is the biggest, least essential one on a small screen —
+     190 flags) is the biggest, least essential one on a small screen —
      Matrix 2 (found) and 3 (played) stay, since those actually reflect
      session progress; Matrix 1 is comparatively decorative.
    - Artist/Lyrics/Genre/Country info cards: desktop-only extras, add
@@ -723,7 +723,7 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
       style="position:absolute;top:50%;right:10px;transform:translateY(-50%);background:transparent;border:1px solid var(--border);color:var(--dim);padding:4px 9px;font-size:.85em;border-radius:5px;cursor:pointer;width:auto;height:auto;letter-spacing:.05em;line-height:1">☾</button>
   </div>
   <div class="slogan" id="slogan">The battle against the algorithm has begun.</div>
-  <div class="sub">// musicbrainz + spotify + mymemory + wikipedia = 650,770 songs across 196 nations &amp; territories in random play</div>
+  <div class="sub">// musicbrainz + spotify + mymemory + wikipedia = 650,770 songs across 190 nations &amp; territories in random play</div>
 </header>
 
 <div id="status"><div id="hdr"><span id="hdr-name">GLOBAL RANDOM v2.0</span><span id="hdr-state">0/3</span></div><div id="term"><div class="term-line in">GIVE YOUR FATE A CHANCE</div></div></div>
@@ -1578,7 +1578,7 @@ const _unknownPool = [];           // tracks without MB country code
    (every single one returned at least a few artists, none were empty).
    This is now independent of LANG_COUNTRIES (which stays for translation
    target languages) — the search/cap system covers every recognized nation. */
-const COUNTRIES = ['AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BT','BO','BA','BW','BR','BN','BG','BF','BI','CV','KH','CM','CA','CF','TD','CL','CN','CO','KM','CG','CD','CR','CI','HR','CU','CY','CZ','DK','DJ','DM','DO','EC','EG','SV','GQ','ER','EE','SZ','ET','FJ','FI','FR','GA','GM','GE','DE','GH','GR','GD','GT','GN','GW','GY','HT','HN','HU','IS','IN','ID','IR','IQ','IE','IL','IT','JM','JP','JO','KZ','KE','KI','KP','KR','KW','KG','LA','LV','LB','LS','LR','LY','LI','LT','LU','MG','MW','MY','MV','ML','MT','MH','MR','MU','MX','FM','MD','MC','MN','ME','MA','MZ','MM','NA','NR','NP','NL','NZ','NI','NE','NG','MK','NO','OM','PK','PW','PA','PG','PY','PE','PH','PL','PT','QA','RO','RU','RW','KN','LC','VC','WS','SM','ST','SA','SN','RS','SC','SL','SG','SK','SI','SB','SO','ZA','SS','ES','LK','SD','SR','SE','CH','SY','TJ','TZ','TH','TL','TG','TO','TT','TN','TR','TM','TV','UG','UA','AE','GB','US','UY','UZ','VU','VE','VN','YE','ZM','ZW',
+const COUNTRIES = ['AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','BH','BD','BB','BY','BE','BZ','BJ','BO','BA','BW','BR','BG','BF','CV','KH','CM','CA','CL','CN','CO','CG','CD','CR','CI','HR','CU','CY','CZ','DK','DJ','DM','DO','EC','EG','SV','EE','SZ','ET','FJ','FI','FR','GA','GM','GE','DE','GH','GR','GD','GT','GN','GW','GY','HT','HN','HU','IS','IN','ID','IR','IQ','IE','IL','IT','JM','JP','JO','KZ','KE','KP','KR','KG','LA','LV','LB','LY','LI','LT','LU','MG','MY','ML','MT','MH','MR','MU','MX','MD','MC','MN','ME','MA','MZ','MM','NP','NL','NZ','NI','NE','NG','MK','NO','OM','PK','PA','PG','PY','PE','PH','PL','PT','QA','RO','RU','RW','VC','SM','ST','SA','SN','RS','SL','SG','SK','SI','SO','ZA','ES','LK','SD','SR','SE','CH','SY','TZ','TH','TL','TG','TT','TN','TR','TM','UG','UA','AE','GB','US','UY','UZ','VE','VN','YE','ZM','ZW',
   /* Non-UN-member entities with real, distinct music scenes — deliberately
      included even though they're not sovereign UN members. This is an art
      project about representation, not a diplomatic register: Puerto Rico's
@@ -1588,13 +1588,13 @@ const COUNTRIES = ['AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','
      bodies (e.g. the EU) already use in practice, not an official
      ISO-3166-1 assignment — included here for the same representational
      reason, not as a statement on the recognition dispute. */
-  'TW','HK','MO','PS','XK','PR','VA','GL',
+  'TW','HK','PS','XK','PR','VA','GL',
   /* Round two: further non-UN territories with distinct music scenes,
      added on the same "art project, not a diplomatic register" basis as
      the first batch above. All use clean, official ISO-3166-1 codes —
      unlike Northern Cyprus or Somaliland, which were deliberately left
      out since they don't have one. */
-  'FO','EH','GI','BM','KY','IM','GG','JE','AS','GU','VI','NC','PF','RE','MQ','GP','GF','CK','NU','AX',
+  'FO','GI','BM','IM','GG','JE','VI','NC','RE','MQ','GP','GF','AX',
   /* Round three: added Oct 2026 after running mb-country-test-all-iso.html
      against all 249 ISO-3166-1 codes — every code below returned at least
      one MusicBrainz artist (CW even clears the ≥50 "ok" threshold on its
@@ -1605,7 +1605,26 @@ const COUNTRIES = ['AF','AL','DZ','AD','AO','AG','AR','AM','AU','AT','AZ','BS','
      codes with a real, confirmed zero and are the sole ones still
      excluded. See HANDOVER doc / test output for the full artist-count
      table if this ever needs re-checking. */
-  'CW','YT','AI','AW','AQ','PM','MF','VG','SX','FK','TC','MS','TK','BL','BQ','MP','CC','UM','BV','CX','HM','IO','NF','PN','SH','WF'];
+  'YT','AW','MF','VG','SX',
+  /* Pruned 13.10.2026: "has at least one MB artist" (round three's test,
+     above) turned out to be a much weaker bar than "has at least one
+     track actually linked to Spotify" (what gr_tracks — our own dataset,
+     see random-track.php — requires before a country can ever be drawn).
+     57 codes that passed the old test never once showed up in a real
+     export — the exact list, and the tool to re-diff this after any
+     future gr_tracks refresh, live in tools/gr-tracks-country-baseline.txt
+     and tools/check-country-coverage.sh. Not a judgment that these places
+     have no music — it's that MusicBrainz's own volunteer catalogue,
+     filtered down to what's actually Spotify-linked, doesn't reach them
+     yet. A flag that can structurally never light up doesn't serve the
+     "every nation gets a fair, visible shot" idea any better than the
+     500-track MB search cap this dataset itself replaced (see HANDOVER)
+     — both just show nothing and reward nobody with it. Kept the empty
+     slots on principle for a long time anyway; removing them now on the
+     same basis the project has always used to decide this kind of thing:
+     real, checkable data over a symbolic gesture a visitor never
+     actually gets to see fire. */
+  ];
 
 /* Country code → capital name + coords + English wiki slug (for weather + wiki panel) */
 const CAPITALS = {
@@ -2471,7 +2490,7 @@ $('welcome-sub').textContent = BROWSER_LANG==='de'
    renders the full COUNTRIES set at 0% fill with zero finds (the ??-pool
    and country loop both just render empty-ish bars, no discoveries
    required), the empty wait was pure omission, not a deliberate design
-   choice — the full 247-flag grid should be visible immediately, before
+   choice — the full 190-flag grid should be visible immediately, before
    anyone has even pressed play. One-time call here, right at page load. */
 updateFlagBar();
 
@@ -5851,7 +5870,7 @@ _showWEBanner(true);
    _registerPlayed()/_playCountByCountry/updatePlaylist() etc. — those are
    the random-discovery pool's own bookkeeping (footer country count,
    played-bar, playlist rows), and this one-off intro isn't really part of
-   that 247-country pool, so it shouldn't nudge those numbers. Artist/
+   that 190-country pool, so it shouldn't nudge those numbers. Artist/
    country cards go through the SAME real functions a normal track uses
    (loadArtistCard/loadCountryInfo) — genuine Wikipedia bio + Wikidata
    country panel, not placeholder text. Genre card is its OWN thing, not
