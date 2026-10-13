@@ -2831,7 +2831,11 @@ function _grApiBase(){
 }
 async function grRandomSearch(){
   try{
-    const res=await fetch(`${_grApiBase()}random-track.php?n=9`);
+    /* n=1, not 9 (13.10.2026): discoverCandidates()'s per-batch dedup only
+       ever accepted the first of a 9-row same-country batch anyway — see
+       random-track.php's own comment on this. One row per request is the
+       same amount of actually-usable work, just without the wasted 8. */
+    const res=await fetch(`${_grApiBase()}random-track.php?n=1`);
     if(!res.ok) return [];
     const data=await res.json();
     return Array.isArray(data) ? data : [];

@@ -59,7 +59,17 @@ if (!$mysqli) {
 }
 $mysqli->set_charset('utf8mb4');
 
-$n = isset($_GET['n']) ? max(1, min(25, (int) $_GET['n'])) : 9;
+/* Default dropped from 9 to 1 (13.10.2026): discoverCandidates()'s own
+   per-batch dedup only ever accepts the FIRST of a batch anyway (max 1
+   candidate per country per batch, see global-random.html), and all N
+   rows from one call share the same country — so every call past the
+   first inside a batch gets skipped on arrival, and the abandon-after-
+   3-consecutive-skips logic throws the rest away unused well before N=9
+   is ever exhausted. One row per request does the same job with less
+   DB sorting work (ORDER BY RAND() over fewer wasted rows), same
+   request count either way. ?n= still accepted for anyone who wants a
+   bigger batch for some other purpose. */
+$n = isset($_GET['n']) ? max(1, min(25, (int) $_GET['n'])) : 1;
 
 /* TODO (wartet auf MaxMind-Lizenzschlüssel): liest die Besucher-IP NUR
    innerhalb dieser Funktion, gibt ausschließlich den ISO-Ländercode zurück,
