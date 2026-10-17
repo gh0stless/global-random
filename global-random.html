@@ -1884,6 +1884,28 @@ const CAPITALS = {
   WF:{name:'Mata-Utu',wiki:'Wallis_and_Futuna',lat:-13.2825,lon:-176.1743}
 };
 
+/* Defunct states whose ISO 3166-1 code still shows up in MB's artist/area
+   data (SU dissolved 1991, YU dissolved 2003/2006 depending on which split
+   you count). Deliberately NOT in COUNTRIES/CAPITALS: that whitelist also
+   drives the flag bar, pool CAP/FIFO and the X/191 progress counters, and
+   Twemoji has no flag SVG for either code (confirmed: 404 for both
+   1f1f8-1f1fa.svg and 1f1fe-1f1fa.svg, vs. 200 for Kosovo's 1f1fd-1f1f0.svg
+   — Kosovo got a vendor-added flag asset despite the same not-ISO-current
+   problem, these two never will). Remapping to a modern successor state
+   (SU→RU, YU→RS) was considered and rejected: MB tags individual artists
+   this way regardless of which specific Soviet/Yugoslav republic they were
+   actually from, so that would misattribute real people's origin rather
+   than just label it imprecisely. This dict exists ONLY to drive the wiki
+   info panel for these two (see loadCountryInfo/_countryDisplayName) —
+   discoverCandidates()/loadMeta() still null the main `code` for both via
+   isRealCountryCode(), exactly like any other non-whitelisted code; a
+   separate `histCode` field carries the raw value through just far enough
+   to open the panel, with flagEmoji() showing 🌍 instead of a broken flag. */
+const HISTORICAL_CAPITALS = {
+  SU:{name:'Moscow',wiki:'Soviet_Union',lat:55.7558,lon:37.6173},
+  YU:{name:'Belgrade',wiki:'Yugoslavia',lat:44.7866,lon:20.4489},
+};
+
 /* Country code → German display name (for the DE wiki/weather panel) */
 const COUNTRY_DE = {AF:'Afghanistan',AL:'Albanien',DZ:'Algerien',AD:'Andorra',AO:'Angola',AG:'Antigua und Barbuda',AR:'Argentinien',AM:'Armenien',AU:'Australien',AT:'Österreich',AZ:'Aserbaidschan',BS:'Bahamas',BH:'Bahrain',BD:'Bangladesch',BB:'Barbados',BY:'Belarus',BE:'Belgien',BZ:'Belize',BJ:'Benin',BT:'Bhutan',BO:'Bolivien',BA:'Bosnien und Herzegowina',BW:'Botswana',BR:'Brasilien',BN:'Brunei',BG:'Bulgarien',BF:'Burkina Faso',BI:'Burundi',CV:'Kap Verde',KH:'Kambodscha',CM:'Kamerun',CA:'Kanada',CF:'Zentralafrikanische Republik',TD:'Tschad',CL:'Chile',CN:'China',CO:'Kolumbien',KM:'Komoren',CG:'Republik Kongo',CD:'Demokratische Republik Kongo',CR:'Costa Rica',CI:'Elfenbeinküste',HR:'Kroatien',CU:'Kuba',CY:'Zypern',CZ:'Tschechien',DK:'Dänemark',DJ:'Dschibuti',DM:'Dominica',DO:'Dominikanische Republik',EC:'Ecuador',EG:'Ägypten',SV:'El Salvador',GQ:'Äquatorialguinea',ER:'Eritrea',EE:'Estland',SZ:'Eswatini',ET:'Äthiopien',FJ:'Fidschi',FI:'Finnland',FR:'Frankreich',GA:'Gabun',GM:'Gambia',GE:'Georgien',DE:'Deutschland',GH:'Ghana',GR:'Griechenland',GD:'Grenada',GT:'Guatemala',GN:'Guinea',GW:'Guinea-Bissau',GY:'Guyana',HT:'Haiti',HN:'Honduras',HU:'Ungarn',IS:'Island',IN:'Indien',ID:'Indonesien',IR:'Iran',IQ:'Irak',IE:'Irland',IL:'Israel',IT:'Italien',JM:'Jamaika',JP:'Japan',JO:'Jordanien',KZ:'Kasachstan',KE:'Kenia',KI:'Kiribati',KP:'Nordkorea',KR:'Südkorea',KW:'Kuwait',KG:'Kirgisistan',LA:'Laos',LV:'Lettland',LB:'Libanon',LS:'Lesotho',LR:'Liberia',LY:'Libyen',LI:'Liechtenstein',LT:'Litauen',LU:'Luxemburg',MG:'Madagaskar',MW:'Malawi',MY:'Malaysia',MV:'Malediven',ML:'Mali',MT:'Malta',MH:'Marshallinseln',MR:'Mauretanien',MU:'Mauritius',MX:'Mexiko',FM:'Mikronesien',MD:'Moldau',MC:'Monaco',MN:'Mongolei',ME:'Montenegro',MA:'Marokko',MZ:'Mosambik',MM:'Myanmar',NA:'Namibia',NR:'Nauru',NP:'Nepal',NL:'Niederlande',NZ:'Neuseeland',NI:'Nicaragua',NE:'Niger',NG:'Nigeria',MK:'Nordmazedonien',NO:'Norwegen',OM:'Oman',PK:'Pakistan',PW:'Palau',PA:'Panama',PG:'Papua-Neuguinea',PY:'Paraguay',PE:'Peru',PH:'Philippinen',PL:'Polen',PT:'Portugal',QA:'Katar',RO:'Rumänien',RU:'Russland',RW:'Ruanda',KN:'St. Kitts und Nevis',LC:'St. Lucia',VC:'St. Vincent und die Grenadinen',WS:'Samoa',SM:'San Marino',ST:'São Tomé und Príncipe',SA:'Saudi-Arabien',SN:'Senegal',RS:'Serbien',SC:'Seychellen',SL:'Sierra Leone',SG:'Singapur',SK:'Slowakei',SI:'Slowenien',SB:'Salomonen',SO:'Somalia',ZA:'Südafrika',SS:'Südsudan',ES:'Spanien',LK:'Sri Lanka',SD:'Sudan',SR:'Suriname',SE:'Schweden',CH:'Schweiz',SY:'Syrien',TJ:'Tadschikistan',TZ:'Tansania',TH:'Thailand',TL:'Timor-Leste',TG:'Togo',TO:'Tonga',TT:'Trinidad und Tobago',TN:'Tunesien',TR:'Türkei',TM:'Turkmenistan',TV:'Tuvalu',UG:'Uganda',UA:'Ukraine',AE:'Vereinigte Arabische Emirate',GB:'Vereinigtes Königreich',US:'Vereinigte Staaten',UY:'Uruguay',UZ:'Usbekistan',VU:'Vanuatu',VE:'Venezuela',VN:'Vietnam',YE:'Jemen',ZM:'Sambia',ZW:'Simbabwe',TW:'Taiwan',HK:'Hongkong',MO:'Macau',PS:'Palästina',XK:'Kosovo',PR:'Puerto Rico',VA:'Vatikanstadt',GL:'Grönland',FO:'Färöer',EH:'Westsahara',GI:'Gibraltar',BM:'Bermuda',KY:'Kaimaninseln',IM:'Isle of Man',GG:'Guernsey',JE:'Jersey',AS:'Amerikanisch-Samoa',GU:'Guam',VI:'Amerikanische Jungferninseln',NC:'Neukaledonien',PF:'Französisch-Polynesien',RE:'Réunion',MQ:'Martinique',GP:'Guadeloupe',GF:'Französisch-Guayana',CK:'Cookinseln',NU:'Niue',AX:'Åland',
   /* Round three — same 26 as COUNTRIES/CAPITALS round three above */
@@ -1896,13 +1918,16 @@ const COUNTRY_DE = {AF:'Afghanistan',AL:'Albanien',DZ:'Algerien',AD:'Andorra',AO
   UM:'Kleinere Amerikanische Überseeinseln',BV:'Bouvetinsel',
   CX:'Weihnachtsinsel',HM:'Heard- und McDonaldinseln',
   IO:'Britisches Territorium im Indischen Ozean',NF:'Norfolkinsel',
-  PN:'Pitcairninseln',SH:'St. Helena',WF:'Wallis und Futuna'};
+  PN:'Pitcairninseln',SH:'St. Helena',WF:'Wallis und Futuna',
+  /* Historical, not in COUNTRIES — see HISTORICAL_CAPITALS */
+  SU:'Sowjetunion',YU:'Jugoslawien'};
 
 /* Country code -> Arabic display name, fetched via tools/test.html (batch MyMemory
    run over VPN to dodge the dev machine's exhausted quota). Six entries MyMemory had
    no translation for (fell back to English) and one wrong match (Cook Islands got the
    Marshall Islands translation) were corrected by hand against ar.wikipedia.org. */
-const COUNTRY_AR={CN:'الصين',JP:'اليابان',KR:'كوريا الجنوبية',IN:'الهند',BD:'بنغلاديش',VN:'فيتنام',TH:'تايلاند',ID:'إندونيسيا',MY:'ماليزيا',PH:'الفلبين',MN:'منغوليا',NP:'نيبال',PK:'باكستان',EG:'مصر',SA:'المملكة العربية السعودية',AE:'دولة الإمارات العربية المتحدة',MA:'المغرب',LB:'لبنان',JO:'الأردن',DZ:'الجزائر',TN:'تونس',IQ:'العراق',SY:'سوريا',LY:'ليبيا',YE:'اليمن',OM:'عُمان',KW:'الكويت',QA:'قطر',BH:'البحرين',SD:'السودان',IR:'إيران',IL:'إسرائيل',TR:'تركيا',AZ:'أذربيجان',KZ:'كازاخستان',AM:'أرمينيا',GE:'جورجيا',FR:'فرنسا',ES:'إسبانيا',BR:'البرازيل',IT:'إيطاليا',RO:'رومانيا',HT:'هاييتي',DE:'ألمانيا',NL:'هولندا',SE:'السويد',NO:'النرويج',DK:'الدنمارك',IS:'آيسلندا',ZA:'جنوب أفريقيا',RU:'روسيا',PL:'بولندا',CZ:'جمهورية التشيك',SK:'سلوفاكيا',UA:'أوكرانيا',BG:'بلغاريا',HR:'كرواتيا',RS:'صربيا',SI:'سلوفينيا',MK:'مقدونيا الشمالية',GR:'اليونان',HU:'المجر',FI:'فنلندا',EE:'استونيا',LV:'لاتفيا',LT:'ليتوانيا',AL:'ألبانيا',MT:'مالطا',IE:'أيرلندا',GB:'المملكة المتحدة',KE:'كينيا',NG:'نيجيريا',ET:'إثيوبيا',SO:'الصومال',US:'الولايات المتحدة الأمريكية',MX:'المكسيك',AR:'الأرجنتين',CO:'كولومبيا',PE:'البيرو',CL:'تشيلي',VE:'فنزويلا',PT:'البرتغال',CA:'كندا',AU:'أستراليا',NZ:'نيوزيلندا',AT:'النمسا',CH:'سويسرا',BE:'بلجيكا',BY:'بيلاروسيا',TW:'تايوان',HK:'هونغ كونغ',MO:'ماكاو',PS:'دولة فلسطين',XK:'كوسوفو',PR:'بورتوريكو',VA:'مدينة الفاتيكان',GL:'الأرض الخضراء',FO:'جزر فارو',EH:'الصحراء الغربية',GI:'جبل طارق',BM:'برمودا',KY:'جزر كايمان',IM:'جزيرة آيل أوف مان',GG:'جيرنسي',JE:'جيرسي',AS:'ساموا الأمريكية',GU:'غوام',VI:'جزر فرجن التابعة للولايات المتحدة',NC:'كاليدونيا الجديدة',PF:'بولينيزيا الفرنسية',RE:'ريونيون',MQ:'مارتينيك',GP:'غوادلوب',GF:'جويانا الفرنسية',CK:'جزر كوك',NU:'نيوي',AX:'جزر آلاند',AD:'أندورا',AF:'أفغانستان',AG:'أنتيغوا وبربودا',AO:'أنغولا',BA:'البوسنة والهرسك',BB:'باربادوس',BF:'بوركينا فاسو',BI:'بوروندي',BJ:'بنين',BN:'بروناي',BO:'بوليفيا',BS:'جزر البهاماز',BT:'بوتان',BW:'بوتسوانا',BZ:'بيليز',CD:'جمهورية الكونغو الديمقراطية',CF:'جمهورية أفريقيا الوسطى',CG:'جمهورية الكونغو',CI:'ساحل العاج',CM:'الكاميرون',CR:'كوستاريكا',CU:'كوبا',CV:'الرأس الأخضر',CY:'قبرص',DJ:'جيبوتي',DM:'دومينيكا',DO:'جمهورية الدومينيكان',EC:'الإكوادور',ER:'إريتريا',FJ:'فيجي',FM:'ولايات ميكرونيسيا المتحدة',GA:'الغابون',GD:'غرينادا',GH:'غانا',GM:'غامبيا',GN:'غينيا',GQ:'غينيا الاستوائية',GT:'غواتيمالا',GW:'غينيا بيساو',GY:'غيانا',HN:'الهندوراس',JM:'جامايكا',KG:'قيرغيزستان',KH:'كمبوديا',KI:'كيريباتي',KM:'جزر القمر',KN:'سانت كيتس ونيفيس',KP:'كوريا الشمالية',LA:'لاوس',LC:'سان لوسيا',LI:'ليختنشتاين',LK:'سري لانكا',LR:'ليبيريا',LS:'ليسوتو',LU:'لوكسمبورغ',MC:'موناكو',MD:'مولدوفا',ME:'الجبل الأسود',MG:'مدغشقر',MH:'جزر مارشال',ML:'مالي',MM:'ميانمار',MR:'موريتانيا',MU:'موريشيوس',MV:'جزر المالديف',MW:'ملاوي',MZ:'موزمبيق',NA:'ناميبيا',NE:'النيجر',NI:'نيكاراغوا',NR:'ناورو',PA:'بنما',PG:'بابوا غينيا الجديدة',PW:'بالاو',PY:'باراغواي',RW:'رواندا',SB:'جزر سليمان',SC:'سيشل',SG:'سنغافورة',SL:'سيراليون',SM:'سان مارينو',SN:'السنغال',SR:'سورينام',SS:'جنوب السودان',ST:'سان تومي وبرينسيبي',SV:'السلفادور',SZ:'إيسواتيني',TD:'تشاد',TG:'توغو',TJ:'طاجيكستان',TL:'تيمور الشرقية',TM:'تركمانستان',TO:'تونغا',TT:'ترينداد وتوباجو',TV:'توفالو',TZ:'تنزانيا',UG:'أوغندا',UY:'الأوروغواي',UZ:'أوزباكستان',VC:'سانت فنسنت والغرينادين',VU:'فانواتو',WS:'ساموا',ZM:'زامبيا',ZW:'زيمبابوي',CW:'كوراساو',YT:'مايوت',AI:'أنغويلا',AW:'أروبا',AQ:'أنتاركتيكا',PM:'سان بيار وميكلون',MF:'جماعة القديس مارتن',VG:'جزر فيرجن البريطانية',SX:'سينت مارتن',FK:'جزر فوكلاند',TC:'جزر توركس وكايكوس',MS:'مونتسيرات',TK:'توكيلاو',BL:'سانت بارتيليمي',BQ:'جزر المملكة الهولندية الكاريبية',MP:'جزر ماريانا الشمالية',CC:'جزر كوكوس (كيلينج)',UM:'جزر الولايات المتحدة الصغيرة النائية',BV:'جزيرة بوفيت',CX:'جزيرة كريسماس',HM:'جزيرة هيرد وجزر ماكدونالد',IO:'إقليم المحيط الهندي البريطاني',NF:'جزيرة نورفولك',PN:'جزر بيتكيرن',SH:'سانت هيلينا وأسينشين وتريستان دا كونا',WF:'واليس وفوتونا'};
+const COUNTRY_AR={CN:'الصين',JP:'اليابان',KR:'كوريا الجنوبية',IN:'الهند',BD:'بنغلاديش',VN:'فيتنام',TH:'تايلاند',ID:'إندونيسيا',MY:'ماليزيا',PH:'الفلبين',MN:'منغوليا',NP:'نيبال',PK:'باكستان',EG:'مصر',SA:'المملكة العربية السعودية',AE:'دولة الإمارات العربية المتحدة',MA:'المغرب',LB:'لبنان',JO:'الأردن',DZ:'الجزائر',TN:'تونس',IQ:'العراق',SY:'سوريا',LY:'ليبيا',YE:'اليمن',OM:'عُمان',KW:'الكويت',QA:'قطر',BH:'البحرين',SD:'السودان',IR:'إيران',IL:'إسرائيل',TR:'تركيا',AZ:'أذربيجان',KZ:'كازاخستان',AM:'أرمينيا',GE:'جورجيا',FR:'فرنسا',ES:'إسبانيا',BR:'البرازيل',IT:'إيطاليا',RO:'رومانيا',HT:'هاييتي',DE:'ألمانيا',NL:'هولندا',SE:'السويد',NO:'النرويج',DK:'الدنمارك',IS:'آيسلندا',ZA:'جنوب أفريقيا',RU:'روسيا',PL:'بولندا',CZ:'جمهورية التشيك',SK:'سلوفاكيا',UA:'أوكرانيا',BG:'بلغاريا',HR:'كرواتيا',RS:'صربيا',SI:'سلوفينيا',MK:'مقدونيا الشمالية',GR:'اليونان',HU:'المجر',FI:'فنلندا',EE:'استونيا',LV:'لاتفيا',LT:'ليتوانيا',AL:'ألبانيا',MT:'مالطا',IE:'أيرلندا',GB:'المملكة المتحدة',KE:'كينيا',NG:'نيجيريا',ET:'إثيوبيا',SO:'الصومال',US:'الولايات المتحدة الأمريكية',MX:'المكسيك',AR:'الأرجنتين',CO:'كولومبيا',PE:'البيرو',CL:'تشيلي',VE:'فنزويلا',PT:'البرتغال',CA:'كندا',AU:'أستراليا',NZ:'نيوزيلندا',AT:'النمسا',CH:'سويسرا',BE:'بلجيكا',BY:'بيلاروسيا',TW:'تايوان',HK:'هونغ كونغ',MO:'ماكاو',PS:'دولة فلسطين',XK:'كوسوفو',PR:'بورتوريكو',VA:'مدينة الفاتيكان',GL:'الأرض الخضراء',FO:'جزر فارو',EH:'الصحراء الغربية',GI:'جبل طارق',BM:'برمودا',KY:'جزر كايمان',IM:'جزيرة آيل أوف مان',GG:'جيرنسي',JE:'جيرسي',AS:'ساموا الأمريكية',GU:'غوام',VI:'جزر فرجن التابعة للولايات المتحدة',NC:'كاليدونيا الجديدة',PF:'بولينيزيا الفرنسية',RE:'ريونيون',MQ:'مارتينيك',GP:'غوادلوب',GF:'جويانا الفرنسية',CK:'جزر كوك',NU:'نيوي',AX:'جزر آلاند',AD:'أندورا',AF:'أفغانستان',AG:'أنتيغوا وبربودا',AO:'أنغولا',BA:'البوسنة والهرسك',BB:'باربادوس',BF:'بوركينا فاسو',BI:'بوروندي',BJ:'بنين',BN:'بروناي',BO:'بوليفيا',BS:'جزر البهاماز',BT:'بوتان',BW:'بوتسوانا',BZ:'بيليز',CD:'جمهورية الكونغو الديمقراطية',CF:'جمهورية أفريقيا الوسطى',CG:'جمهورية الكونغو',CI:'ساحل العاج',CM:'الكاميرون',CR:'كوستاريكا',CU:'كوبا',CV:'الرأس الأخضر',CY:'قبرص',DJ:'جيبوتي',DM:'دومينيكا',DO:'جمهورية الدومينيكان',EC:'الإكوادور',ER:'إريتريا',FJ:'فيجي',FM:'ولايات ميكرونيسيا المتحدة',GA:'الغابون',GD:'غرينادا',GH:'غانا',GM:'غامبيا',GN:'غينيا',GQ:'غينيا الاستوائية',GT:'غواتيمالا',GW:'غينيا بيساو',GY:'غيانا',HN:'الهندوراس',JM:'جامايكا',KG:'قيرغيزستان',KH:'كمبوديا',KI:'كيريباتي',KM:'جزر القمر',KN:'سانت كيتس ونيفيس',KP:'كوريا الشمالية',LA:'لاوس',LC:'سان لوسيا',LI:'ليختنشتاين',LK:'سري لانكا',LR:'ليبيريا',LS:'ليسوتو',LU:'لوكسمبورغ',MC:'موناكو',MD:'مولدوفا',ME:'الجبل الأسود',MG:'مدغشقر',MH:'جزر مارشال',ML:'مالي',MM:'ميانمار',MR:'موريتانيا',MU:'موريشيوس',MV:'جزر المالديف',MW:'ملاوي',MZ:'موزمبيق',NA:'ناميبيا',NE:'النيجر',NI:'نيكاراغوا',NR:'ناورو',PA:'بنما',PG:'بابوا غينيا الجديدة',PW:'بالاو',PY:'باراغواي',RW:'رواندا',SB:'جزر سليمان',SC:'سيشل',SG:'سنغافورة',SL:'سيراليون',SM:'سان مارينو',SN:'السنغال',SR:'سورينام',SS:'جنوب السودان',ST:'سان تومي وبرينسيبي',SV:'السلفادور',SZ:'إيسواتيني',TD:'تشاد',TG:'توغو',TJ:'طاجيكستان',TL:'تيمور الشرقية',TM:'تركمانستان',TO:'تونغا',TT:'ترينداد وتوباجو',TV:'توفالو',TZ:'تنزانيا',UG:'أوغندا',UY:'الأوروغواي',UZ:'أوزباكستان',VC:'سانت فنسنت والغرينادين',VU:'فانواتو',WS:'ساموا',ZM:'زامبيا',ZW:'زيمبابوي',CW:'كوراساو',YT:'مايوت',AI:'أنغويلا',AW:'أروبا',AQ:'أنتاركتيكا',PM:'سان بيار وميكلون',MF:'جماعة القديس مارتن',VG:'جزر فيرجن البريطانية',SX:'سينت مارتن',FK:'جزر فوكلاند',TC:'جزر توركس وكايكوس',MS:'مونتسيرات',TK:'توكيلاو',BL:'سانت بارتيليمي',BQ:'جزر المملكة الهولندية الكاريبية',MP:'جزر ماريانا الشمالية',CC:'جزر كوكوس (كيلينج)',UM:'جزر الولايات المتحدة الصغيرة النائية',BV:'جزيرة بوفيت',CX:'جزيرة كريسماس',HM:'جزيرة هيرد وجزر ماكدونالد',IO:'إقليم المحيط الهندي البريطاني',NF:'جزيرة نورفولك',PN:'جزر بيتكيرن',SH:'سانت هيلينا وأسينشين وتريستان دا كونا',WF:'واليس وفوتونا',
+SU:'الاتحاد السوفيتي',YU:'يوغوسلافيا'};
 
 /* Registry of static country-name dicts, keyed by uiLang. Add a new language here once
    its full set has been fetched via test.html — languages NOT in this registry fall back
@@ -1911,7 +1936,7 @@ const COUNTRY_AR={CN:'الصين',JP:'اليابان',KR:'كوريا الجنو�
 const COUNTRY_NAME_DICTS={de:COUNTRY_DE,ar:COUNTRY_AR};
 
 function _countryDisplayName(code,lang){
-  const enName=CAPITALS[code]?.wiki?.replace(/_/g,' ')||code;
+  const enName=(CAPITALS[code]||HISTORICAL_CAPITALS[code])?.wiki?.replace(/_/g,' ')||code;
   if(lang==='en')return enName;
   return COUNTRY_NAME_DICTS[lang]?.[code]||enName;
 }
@@ -3803,7 +3828,12 @@ function isRealCountryCode(code){
 }
 
 function flagEmoji(code){
-  if(!code||code.length!==2)return'🌍';
+  /* isRealCountryCode() gate added 17.10.2026: without it, a historical
+     code reaching here via item.histCode (SU/YU — see HISTORICAL_CAPITALS)
+     would render as a broken/missing glyph, since Twemoji has no flag SVG
+     for either (confirmed 404, unlike Kosovo's XK). Falls back to the same
+     🌍 already used for a missing/invalid code. */
+  if(!code||code.length!==2||!isRealCountryCode(code))return'🌍';
   return[...code.toUpperCase()].map(c=>String.fromCodePoint(c.charCodeAt(0)+127397)).join('');
 }
 
@@ -4126,10 +4156,14 @@ function _applyArtistCard(name,d){
 }
 
 async function loadCountryInfo(code){
-  if(!code||!CAPITALS[code]||code===_countryShown)return;
+  /* HISTORICAL_CAPITALS fallback added 17.10.2026: lets SU/YU open this same
+     panel (real Wikipedia article, real current-weather-in-the-old-capital)
+     without being in CAPITALS/COUNTRIES — see that dict's own comment for why
+     they're kept out of the whitelist proper. */
+  const cap=CAPITALS[code]||HISTORICAL_CAPITALS[code];
+  if(!code||!cap||code===_countryShown)return;
   _countryShown=code;
   const uiLang=BROWSER_LANG||'en';
-  const cap=CAPITALS[code];
 
   /* Country display name: static dict (DE, AR, ...) where we have one, live
      MyMemory fallback otherwise, hard fallback to English if that's unavailable
@@ -4408,7 +4442,7 @@ async function loadMeta(item){
 
       /* 4: artist → country + language */
       const artistId=cr?.artist?.id;
-      let code=null,country='',lang='en',genre=null;
+      let code=null,histCode=null,country='',lang='en',genre=null;
       if(artistId){
         const ar=await mbFetch(`https://musicbrainz.org/ws/2/artist/${artistId}?inc=genres&fmt=json`);
         if(!stillRelevant())return;
@@ -4424,6 +4458,11 @@ async function loadMeta(item){
           ?? ar['begin-area']?.['iso-3166-1-codes']?.[0]  // e.g. birth country
           ?? ar.area?.['iso-3166-1-codes']?.[0]     // area code
           ?? null;
+        /* Capture SU/YU before the whitelist null-out below — see
+           HISTORICAL_CAPITALS' own comment for why these stay out of
+           COUNTRIES/isRealCountryCode() but still deserve a wiki panel. */
+        const rawUpper=code?.toUpperCase();
+        if(rawUpper && HISTORICAL_CAPITALS[rawUpper]) histCode=rawUpper;
         if(code && !isRealCountryCode(code)) code=null; // e.g. XW "[Worldwide]" → treat as unknown
         /* Own artist record has no country → follow MBID to Wikipedia bio,
            scan for a nationality demonym ("American", "German singer"...).
@@ -4478,6 +4517,7 @@ async function loadMeta(item){
       const flag=flagEmoji(code);
       item.word=fullTitle;
       item.countryCode=code; // store for later (e.g. wiki/weather lookup)
+      item.histCode=histCode; // SU/YU only — see HISTORICAL_CAPITALS
       item.genre=genre;
       item.composer=composer;
       item.country=country;
@@ -4954,6 +4994,9 @@ function _renderPlayingMeta(item){
   const skipMetaLookups = _previewConfirmed;
   if(code && !skipMetaLookups){
     loadCountryInfo(code);
+  }else if(item.histCode && !skipMetaLookups){
+    /* SU/YU — no flag/pool slot, but a real wiki panel; see HISTORICAL_CAPITALS */
+    loadCountryInfo(item.histCode);
   }else{
     /* No country for this track → clear stale panel from previous track */
     _countryShown=null;
@@ -5262,7 +5305,7 @@ async function discoverCandidates(){
        gives every country a real shot, even if the pool grows past 30. */
     while(!allCountriesCapped() && _batchesThisRun<MAX_BATCHES_PER_RUN){
       try{
-        let found, code;
+        let found, code, histCode=null;
         {
           /* Refill buffer only when empty — 1 fetch = 9 candidates to resolve */
           if(!_urlBuf.length){
@@ -5291,6 +5334,8 @@ async function discoverCandidates(){
              there's no Wikipedia-bio fallback step to run either. */
           found = {id:f.id, title:f.title, recId:null, artist:f.artist||'', release:null};
           code = (f.country && isRealCountryCode(f.country)) ? f.country : null;
+          const rawUpper=f.country?.toUpperCase();
+          if(!code && rawUpper && HISTORICAL_CAPITALS[rawUpper]) histCode=rawUpper;
         }
 
         /* Max 1 candidate per country per batch — stops bulk-import clumping
@@ -5404,7 +5449,7 @@ async function discoverCandidates(){
           continue;
         }
 
-        const cand = {id:found.id, title:found.title, word, code, recId:found.recId, artist:found.artist};
+        const cand = {id:found.id, title:found.title, word, code, histCode, recId:found.recId, artist:found.artist};
 
         /* Pool cap is FIFO, not reject: we already paid the full API cost to
            resolve this candidate, so instead of throwing the fresh find away,
@@ -5724,7 +5769,7 @@ function _queueItem(chosen, tag){
      area name) result once/if it succeeds — this is only what shows in
      the meantime, same backfill spirit as the rest of this pipeline. */
   const item={id:chosen.id,word:chosen.word,color,info:'',trans:'',title:chosen.title,
-              allWords:null,countryCode:chosen.code,
+              allWords:null,countryCode:chosen.code,histCode:chosen.histCode||null,
               country:chosen.code?_countryDisplayName(chosen.code,BROWSER_LANG||'en'):'',
               recId:chosen.recId,slot};
   queue.push(item);
