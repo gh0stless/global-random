@@ -6748,10 +6748,20 @@ function _pickRandomFromQueue(){
    transition (natural end, PLAY NEXT), on desktop AND mobile, already
    goes through THIS function via playReady(). */
 async function _drawNextTrack(){
-  playDiceSound(); // "nachziehen" — a fresh card is being drawn into contention
+  const _t0=Date.now();
+  const _nachziehMs=playDiceSound(); // "nachziehen" — a fresh card is being drawn into contention
   const fresh=await fetchOneCandidate();
   if(fresh) _removeFromPool(fresh); // committed to this draw either way — win or lose, no longer "available" in the general pool
-  await sleep(350); // kurze Pause — lets the two beats read as distinct
+  /* Wait for beat 1's OWN sound to actually finish before the pause and
+     beat 2 — playDiceSound() returns THIS throw's real, randomized
+     duration (~1.3-2.3s, see its own comment), not a fixed length, and
+     fetchOneCandidate()'s latency already eats into that window. Without
+     this, beat 2's sound/animation could start while beat 1 was still
+     audibly rattling — reported live as "the animation starts before
+     the new card is there". Only tops up whatever's actually left. */
+  const _remaining=_nachziehMs-(Date.now()-_t0);
+  if(_remaining>0) await sleep(_remaining);
+  await sleep(350); // kurze Pause — on top, so the two beats read as distinct, not back-to-back
   const original=queue.slice(); // the BUFFER_SIZE items already queued, each with its real stable .slot
   const contenders=fresh?[...original,fresh]:original; // graceful degrade to a 2-way roll if the fetch failed
   const diceMs=playDiceSound(); // "in Queue auswürfeln" — the real pick
