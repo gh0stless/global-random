@@ -428,7 +428,10 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    it. Toggling .empty and sizing now happen on this untouched wrapper;
    the descendant "iframe" selector still finds Spotify's iframe no
    matter which specific inner node it ends up replacing. */
-#embed-wrapper{height:80px;margin-bottom:8px;flex-shrink:0}
+/* No margin-bottom of its own anymore (17.10.2026) — it now lives INSIDE
+   #preview-stack as that flex column's first child, so the column's own
+   gap:8px already spaces it from the slot below it. */
+#embed-wrapper{height:80px;flex-shrink:0}
 #embed-wrapper iframe{border-radius:10px;width:100%;height:80px;border:none;display:block}
 /* Same treatment as .preview-slot.empty — see playReady()'s comment for
    why the main player needed this too, not just the 3 preview slots. */
@@ -449,7 +452,11 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    show up. pointer-events:none is the actual lock (per Andreas: dimmed
    ones should be un-clickable, not just visually dim) — otherwise a
    click on a dimmed Spotify iframe could start second audio alongside
-   the real one. */
+   the real one. #embed-wrapper (the real, audible player) now sits
+   INSIDE this same container too (17.10.2026) — undimmed, clickable,
+   visually just the first box in the column — but is NOT a .preview-slot
+   itself and gets none of these rules; it keeps its own separate styling
+   right above. */
 #preview-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
 .preview-slot{position:relative;height:80px;border-radius:10px;overflow:hidden;
   flex-shrink:0;opacity:.4;filter:grayscale(.7) brightness(.75);
@@ -772,11 +779,15 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
   <div id="t-meta"></div>
 </div>
 
-<div id="embed-wrapper"><div class="embed-frame"></div></div>
+<!-- NEW RANDOM fork (17.10.2026): main player merged visually into the same
+     3-box column as the preview slots — it's now the first, undimmed box,
+     not a separate element above them. Only 2 preview slots remain (was 3)
+     since the main player itself now occupies what used to be slot 1's
+     position; BUFFER_SIZE dropped 3->2 to match (see its own comment). -->
 <div id="preview-stack">
+  <div id="embed-wrapper"><div class="embed-frame"></div></div>
   <div class="preview-slot" id="preview-slot-1"><div class="preview-frame"></div></div>
   <div class="preview-slot" id="preview-slot-2"><div class="preview-frame"></div></div>
-  <div class="preview-slot" id="preview-slot-3"><div class="preview-frame"></div></div>
 </div>
 </div>
 <div id="col-right">
@@ -1296,7 +1307,11 @@ async function localizeUI(){
 }
 
 /* ── State ── */
-const BUFFER_SIZE=3, played=new Set();
+/* 3->2 (17.10.2026, NEW RANDOM fork): the main player merged visually
+   into the preview column as its first (undimmed) box, so only 2 actual
+   PREVIEW slots remain — queue only ever needs to hold 2 not-yet-playing
+   items now, matching them 1:1. See the HTML comment above #preview-stack. */
+const BUFFER_SIZE=2, played=new Set();
 /* How long AFTER a track starts playing before the queue refill (the
    pool→queue draw, with its own dice sound — see _queueItem()) actually
    happens. Deliberately delayed rather than firing immediately — see the
@@ -2678,16 +2693,19 @@ async function checkServiceHealth(){
   return serviceHealth;
 }
 
-/* Three extra, muted-by-design EmbedControllers for the preview stack (see
+/* Two extra, muted-by-design EmbedControllers for the preview stack (see
    #preview-stack) — pure eye-candy/information, never .play()'d. EC
    itself (the real, audible player) is untouched — same single
    controller the whole rest of the playback engine already expects, so
    none of playReady()/handleBtn()/waitForTrackEnd()/etc. needed to
-   change at all. These three mirror the FULL queue (queue[0]/[1]/[2] —
-   BUFFER_SIZE=3, so all three are always shown, matching the "3 bereit"
-   terminal text) via _syncPreviewSlots(), called after every queue
-   mutation. */
-let ECPreview1=null, ECPreview2=null, ECPreview3=null;
+   change at all. These two mirror the queue (queue[0]/[1] —
+   BUFFER_SIZE=2, so both are always shown, matching the dynamic
+   "N bereit" terminal text) via _syncPreviewSlots(), called after every
+   queue mutation. Was three (ECPreview1-3) before the main player merged
+   visually into the preview column as its own first box (17.10.2026,
+   NEW RANDOM fork) — one preview controller became redundant then,
+   dropped along with #preview-slot-3. */
+let ECPreview1=null, ECPreview2=null;
 window.onSpotifyIframeApiReady=IFrameAPI=>{
   IFrameAPI.createController(document.querySelector('#embed-wrapper .embed-frame'),{width:'100%',height:'80',uri:''},
     ctrl=>{
@@ -2701,8 +2719,6 @@ window.onSpotifyIframeApiReady=IFrameAPI=>{
     {width:'100%',height:'80',uri:''}, ctrl=>{ ECPreview1=ctrl; _syncPreviewSlots(); });
   IFrameAPI.createController(document.querySelector('#preview-slot-2 .preview-frame'),
     {width:'100%',height:'80',uri:''}, ctrl=>{ ECPreview2=ctrl; _syncPreviewSlots(); });
-  IFrameAPI.createController(document.querySelector('#preview-slot-3 .preview-frame'),
-    {width:'100%',height:'80',uri:''}, ctrl=>{ ECPreview3=ctrl; _syncPreviewSlots(); });
 };
 /* Mirrors each queued item's STABLE .slot (0/1/2, assigned once in
    _queueItem() — see the comment there) into the three preview
@@ -2733,10 +2749,10 @@ window.onSpotifyIframeApiReady=IFrameAPI=>{
    slot empties, stays empty, and later gets refilled by the specific
    new item _queueItem() assigns that same slot number to — regardless
    of where either item lives in the array. */
-let _prevUri=[undefined,undefined,undefined]; // undefined (not null) so the very first sync always runs and marks empty slots as empty
+let _prevUri=[undefined,undefined]; // undefined (not null) so the very first sync always runs and marks empty slots as empty
 function _syncPreviewSlots(){
-  const ecs=[ECPreview1,ECPreview2,ECPreview3];
-  for(let i=0;i<3;i++){
+  const ecs=[ECPreview1,ECPreview2];
+  for(let i=0;i<BUFFER_SIZE;i++){
     const q=queue.find(item=>item.slot===i);
     const uri=q?('spotify:track:'+q.id):null;
     if(uri===_prevUri[i])continue;
@@ -5716,12 +5732,12 @@ setInterval(()=>{
 function _checkQueueConsistency(){
   if(_transitioning) return;
   let filledPreview=0;
-  for(let i=1;i<=3;i++){
+  for(let i=1;i<=BUFFER_SIZE;i++){
     const el=$('preview-slot-'+i);
     if(el && !el.classList.contains('empty')) filledPreview++;
   }
   if(filledPreview!==queue.length){
-    console.warn(`[consistency] queue.length=${queue.length} but ${filledPreview}/3 preview slots are non-empty`);
+    console.warn(`[consistency] queue.length=${queue.length} but ${filledPreview}/${BUFFER_SIZE} preview slots are non-empty`);
     /* Self-heal: the DOM only gets resynced at fixed points (after the dice
        animation, after tryPlay()), so a queue that drains without a following
        sync leaves stale preview cards on screen indefinitely. _syncPreviewSlots()
@@ -5872,14 +5888,15 @@ function _queueItem(chosen, tag){
      same country too if it still has other candidates waiting. */
   countSeen[code]=(countSeen[code]||0)+1; // session-cumulative, feeds cap in discoverCandidates
   const color=randomColor();
-  /* Stable visual slot (0/1/2), NOT array position — see the big comment
-     on _syncPreviewSlots() for why these had to be decoupled. Find the
-     first of the three slot numbers not currently held by anything still
-     in `queue` and claim it; this specific item stays visually pinned to
-     that slot for its whole time in the queue, however `queue` itself
-     gets reordered by later splices elsewhere. */
+  /* Stable visual slot (0/1, was 0/1/2 pre-merge), NOT array position —
+     see the big comment on _syncPreviewSlots() for why these had to be
+     decoupled. Find the first of the BUFFER_SIZE slot numbers not
+     currently held by anything still in `queue` and claim it; this
+     specific item stays visually pinned to that slot for its whole time
+     in the queue, however `queue` itself gets reordered by later splices
+     elsewhere. */
   const takenSlots=new Set(queue.map(q=>q.slot));
-  let slot=0; while(takenSlots.has(slot) && slot<3) slot++;
+  let slot=0; while(takenSlots.has(slot) && slot<BUFFER_SIZE) slot++;
   /* Provisional display name from the country CODE discovery already
      resolved — cheap, local, no network call (CAPITALS/COUNTRY_NAME_DICTS
      lookups, same helper loadCountryInfo() already uses for the LAND
@@ -6604,7 +6621,7 @@ let _lastPickedSlotIdx=null;
    visibly already playing before the roll had even finished). */
 function _animateDiceRoll(winnerIdx,totalMs){
   if(winnerIdx==null||!totalMs||totalMs<=0)return Promise.resolve();
-  const slots=[1,2,3].map(n=>$('preview-slot-'+n));
+  const slots=Array.from({length:BUFFER_SIZE},(_,n)=>$('preview-slot-'+(n+1)));
   if(slots.some(s=>!s))return Promise.resolve();
   return new Promise(resolve=>{
     const minStep=50, maxStep=260;
@@ -6622,7 +6639,7 @@ function _animateDiceRoll(winnerIdx,totalMs){
         resolve();
         return;
       }
-      slots[i%3].classList.add('dice-cycle');
+      slots[i%slots.length].classList.add('dice-cycle');
       const progress=Math.min(1,elapsed/totalMs);
       const step=Math.min(remaining, minStep+(maxStep-minStep)*progress*progress); // ease-out — starts fast, slows near the end
       elapsed+=step;
