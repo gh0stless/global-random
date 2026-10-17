@@ -6752,6 +6752,24 @@ async function _drawNextTrack(){
   const _nachziehMs=playDiceSound(); // "nachziehen" — a fresh card is being drawn into contention
   const fresh=await fetchOneCandidate();
   if(fresh) _removeFromPool(fresh); // committed to this draw either way — win or lose, no longer "available" in the general pool
+  /* Show the drawn card immediately, right in the vacated embed-wrapper
+     slot — dimmed, like any other pending preview card (reusing
+     .preview-slot's own resting style rather than inventing a new one;
+     #embed-wrapper has no id/class clash with it). Reported live: "die
+     nachgezogene Karte ist nicht sichtbar" — before this, the fresh
+     candidate existed only as backend data for the whole nachziehen +
+     pause + roll sequence, with nothing on screen confirming a card had
+     actually been drawn until the very end. embed-wrapper's own .empty
+     (added unconditionally at the top of playReady(), before this ever
+     runs) has to come off here too, or the dimmed card would ALSO be
+     invisible (opacity:0 is stronger than the dimming). Gets undone
+     (both the dimming and, if this card didn't win, the content itself)
+     once the roll actually lands — see playReady()'s own call site. */
+  if(fresh){
+    EC.loadUri('spotify:track:'+fresh.id);
+    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
+    $('embed-wrapper').classList.add('preview-slot');
+  }
   /* Wait for beat 1's OWN sound to actually finish before the pause and
      beat 2 — playDiceSound() returns THIS throw's real, randomized
      duration (~1.3-2.3s, see its own comment), not a fixed length, and
@@ -6765,13 +6783,19 @@ async function _drawNextTrack(){
   const original=queue.slice(); // the BUFFER_SIZE items already queued, each with its real stable .slot
   const contenders=fresh?[...original,fresh]:original; // graceful degrade to a 2-way roll if the fetch failed
   const diceMs=playDiceSound(); // "in Queue auswürfeln" — the real pick
+  /* The REAL roll — decided instantly, right here, same as it always
+     was. What changed (17.10.2026): everything that FOLLOWS from this
+     decision now also happens immediately, in the same breath, instead
+     of being held back until the chase animation finishes. Reported
+     live twice: "neue Karte kommt erst nach der Animation" and "echtes
+     Würfeln und Angezeigtes soll zeitnah sein" — both were the same root
+     cause, the queue rebuild + _syncPreviewSlots() call used to sit in
+     playReady(), gated behind `await diceAnim`. The two cards that did
+     NOT win settle into their slots and become visible right now; only
+     the WINNER's reveal (embed-wrapper's actual cover art / EC.loadUri)
+     still waits for the chase to land — that part is the one deliberate
+     suspense beat left, not an accident. */
   const winner=contenders[Math.floor(Math.random()*contenders.length)];
-  /* Chase always lands on slots[0] == #embed-wrapper (see
-     _animateDiceRoll's own comment) — that's where the winner's cover
-     art actually loads right after this resolves, regardless of which
-     of the 3 contenders it was or which preview box it used to sit in. */
-  const diceAnim=_animateDiceRoll(0,diceMs);
-
   const losers=contenders.filter(c=>c!==winner);
   const takenSlots=new Set();
   queue.length=0;
@@ -6783,6 +6807,16 @@ async function _drawNextTrack(){
     takenSlots.add(l.slot);
     queue.push(l);
   });
+  _syncPreviewSlots(); // immediately — see the comment above for why this moved here
+
+  /* Chase always lands on slots[0] == #embed-wrapper (see
+     _animateDiceRoll's own comment) — that's where the winner's cover
+     art actually loads right after this resolves, regardless of which
+     of the 3 contenders it was or which preview box it used to sit in.
+     Started AFTER the real decision/preview sync above, not before —
+     it's cosmetic suspense layered on top of already-final state, not a
+     gate the real update has to wait behind. */
+  const diceAnim=_animateDiceRoll(0,diceMs);
 
   return {item:winner, diceMs, diceAnim};
 }
@@ -7175,9 +7209,12 @@ async function playReady(){
        before playback actually starts, so this is genuinely "something is
        here now", not a premature reveal. embed-wrapper-blank is cleared
        alongside it — a no-op unless the intro-skip empty-queue fallback
-       added it (see finish() in _playWEIntro()). */
-    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
-    EC.loadUri('spotify:track:'+item.id);
+       added it (see finish() in _playWEIntro()). 'preview-slot' is cleared
+       too — a no-op unless _drawNextTrack() dimmed embed-wrapper for the
+       pending-card preview during the roll (see its own comment); either
+       way this is the moment that card's fate is settled, win or lose. */
+    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank','preview-slot');
+    EC.loadUri('spotify:track:'+item.id); // always re-set, even if this is the SAME uri _drawNextTrack() already loaded for the pending preview — a harmless no-op-ish reload at worst, same as _syncPreviewSlots() already assumes elsewhere
     /* Tried shortening this to 150ms on the theory that it was pure
        connection-speed padding — WRONG, and confirmed wrong the hard way:
        at 150ms, EC.play() reliably no-ops (doesn't throw, so tryPlay()'s
