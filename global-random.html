@@ -5607,10 +5607,17 @@ const _appLoadedAt=Date.now();
    allCountriesCapped() can structurally never go fully true, same
    underlying reason the pre-prune COUNTRIES array never capped either,
    just a different, smaller set of countries causing it now. Using it
-   here would have meant warm-up always ran the full 5-minute backstop,
-   waiting on something that was never going to happen — exactly the bug
-   this whole condition-based approach was meant to avoid. */
-const DISCOVERY_WARMUP_MAX_MS=300000; // hard cap: 5 minutes of full speed, no matter what
+   here would have meant warm-up always ran the full backstop, waiting on
+   something that was never going to happen — exactly the bug this whole
+   condition-based approach was meant to avoid.
+
+   Backstop shortened 5min→2min (17.10.2026): allCountriesFound() reliably
+   goes true well under 2 minutes in practice (reported live), so the
+   5-minute value only ever mattered as a ceiling nothing was actually
+   hitting — 2 minutes is still generous headroom above the observed
+   real-world fill time without leaving turbo mode running needlessly
+   long on the rare session where discovery is unusually slow. */
+const DISCOVERY_WARMUP_MAX_MS=120000; // hard cap: 2 minutes of full speed, no matter what
 const DISCOVERY_IDLE_EVERY_N_TICKS=6; // after warm-up ends: one in every 6 ticks (~60s)
 let _heartbeatTicks=0;
 setInterval(()=>{
