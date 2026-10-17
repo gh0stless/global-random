@@ -5580,6 +5580,79 @@ async function discoverCandidates(){
   }
 }
 
+/* NEW RANDOM fork (17.10.2026): a single, independent fetch-and-resolve
+   cycle, called from promoteFromPool() right before every draw — see its
+   own comment there for why. Deliberately NOT a slice of discoverCandidates()
+   reused in place: that function's per-candidate logic is wrapped in a lot
+   of BATCH-level bookkeeping (_batchCountriesUsed/_batchArtistsUsed/
+   _batchReleasesUsed, the abandon-after-3-consecutive-skips counter,
+   MAX_ACCEPTED_PER_BATCH) that only ever existed to stop CLUMPING within
+   one multi-row response — moot here, since grRandomSearch() already
+   fetches exactly one row per call (default n=1, see its own history).
+   Everything below this point mirrors discoverCandidates()'s per-candidate
+   acceptance logic (country whitelist, HISTORICAL_CAPITALS carve-out,
+   title/length checks, session cap, CAP/FIFO eviction, flag bar) so a
+   candidate ends up in EXACTLY the same shape and the EXACT same
+   candidates/countryStacks/_unknownPool structures either way — just
+   without the batch-clumping machinery this single-row path doesn't need.
+   Never throws: a failed fetch here just means this particular draw runs
+   on whatever was already in the pool, same as before this fork. */
+async function fetchOneCandidate(){
+  try{
+    const rows=await grRandomSearch();
+    const f=rows[0];
+    if(!f || played.has(f.id) || candidates.some(c=>c.id===f.id)) return null;
+
+    const found={id:f.id, title:f.title, recId:null, artist:f.artist||'', release:null};
+    const code=(f.country && isRealCountryCode(f.country)) ? f.country : null;
+    const rawUpper=f.country?.toUpperCase();
+    const histCode=(!code && rawUpper && HISTORICAL_CAPITALS[rawUpper]) ? rawUpper : null;
+
+    if(shouldSkip(found.title)) return null;
+    const word=cleanTitle(found.title);
+    if(!word || word.length<2) return null;
+
+    const SESSION_CAP=CAP*3;
+    const sessionCount=countSeen[code]||0;
+    if(code && sessionCount>=SESSION_CAP) return null;
+
+    const cand={id:found.id, title:found.title, word, code, histCode, recId:found.recId, artist:found.artist};
+
+    if(code){
+      if(!countryStacks[code]) countryStacks[code]=[];
+      const countryCount=candidates.filter(c=>c.code===code).length;
+      if(countryCount>=CAP){
+        const oldest=countryStacks[code].shift();
+        if(oldest){
+          const oIdx=candidates.findIndex(c=>c.id===oldest.id);
+          if(oIdx!==-1) candidates.splice(oIdx,1);
+        }
+      }
+      candidates.push(cand);
+      countryStacks[code].push(cand);
+      _poolLastUpdate[code]=Date.now();
+      _registerFound(code);
+    }else{
+      if(_unknownPool.length>=CAP){
+        const oldest=_unknownPool.shift();
+        if(oldest){
+          const oIdx=candidates.findIndex(c=>c.id===oldest.id);
+          if(oIdx!==-1) candidates.splice(oIdx,1);
+        }
+      }
+      candidates.push(cand);
+      _unknownPool.push(cand);
+      _poolLastUpdate['??']=Date.now();
+      _registerFound('??');
+    }
+    updateFlagBar();
+    return cand;
+  }catch(e){
+    console.error('[fetchOneCandidate] failed, continuing with existing pool:',e);
+    return null;
+  }
+}
+
 /* Heartbeat: every 10s check if pool needs refilling — catches edge cases
    where engineRunning got cleared but no track event triggered searchEngine.
    ALSO nudge the queue itself: discoverCandidates() only grows the pool
@@ -5611,13 +5684,14 @@ const _appLoadedAt=Date.now();
    something that was never going to happen — exactly the bug this whole
    condition-based approach was meant to avoid.
 
-   Backstop shortened 5min→2min (17.10.2026): allCountriesFound() reliably
-   goes true well under 2 minutes in practice (reported live), so the
-   5-minute value only ever mattered as a ceiling nothing was actually
-   hitting — 2 minutes is still generous headroom above the observed
-   real-world fill time without leaving turbo mode running needlessly
-   long on the rare session where discovery is unusually slow. */
-const DISCOVERY_WARMUP_MAX_MS=120000; // hard cap: 2 minutes of full speed, no matter what
+   Backstop shortened 5min→2min→1min (17.10.2026): allCountriesFound()
+   reliably goes true well under even 1 minute in practice (reported
+   live), so the longer values only ever mattered as a ceiling nothing
+   was actually hitting. On the new-random fork specifically, pool
+   discovery is further topped up by fetchOneCandidate() on every single
+   draw (see promoteFromPool()) on top of this warm-up window, so there's
+   even less reason for the backstop itself to stay long. */
+const DISCOVERY_WARMUP_MAX_MS=60000; // hard cap: 1 minute of full speed, no matter what
 const DISCOVERY_IDLE_EVERY_N_TICKS=6; // after warm-up ends: one in every 6 ticks (~60s)
 let _heartbeatTicks=0;
 setInterval(()=>{
@@ -5719,7 +5793,7 @@ async function promoteFromPool(){
       if(candidates.length<3) return; // not enough variety yet — discovery keeps running, try again next call
       _firstPromoteDiversityMet=true;
     }
-    while(queue.length<BUFFER_SIZE && candidates.length>0){
+    while(queue.length<BUFFER_SIZE){
       /* Small yield after each queue step so the browser actually gets a
          chance to repaint between them. Without this, once the diversity
          gate above is satisfied, this loop fills 0→BUFFER_SIZE in one
@@ -5727,23 +5801,39 @@ async function promoteFromPool(){
          at each step, but the browser never paints the intermediate values,
          so it visually looks like a jump straight from 0/3 to 3/3. */
       if(queue.length>0) await sleep(150);
-      const availCountries=Object.keys(countryStacks).filter(c=>countryStacks[c].length>0);
 
-    /* No country-tagged candidates → pick any */
-    if(availCountries.length===0){
+      /* NEW RANDOM fork (17.10.2026): one fresh single-track fetch BEFORE
+         every single draw, not just on the heartbeat/track-change triggers
+         that top up the pool in the background anyway. Purpose, stated
+         directly: a track that was JUST discovered this instant should have
+         a real (if small, pool-size-dependent) chance of being the very
+         next thing that plays, instead of only ever reachable once its
+         "turn" comes up some indefinite time later. Failure here (network
+         hiccup) just means this particular draw runs on whatever was
+         already in the pool — fetchOneCandidate() never throws. */
+      await fetchOneCandidate();
       if(candidates.length===0) break;
+
+      /* Flat draw across the ENTIRE combined pool (every country-tagged
+         candidate AND every unknown-country one, all in one array) —
+         replaces the old two-step "pick a country uniformly, THEN a song
+         from it" fairness model. That old model deliberately gave a
+         country with 1 pooled track and a country with CAP=6 pooled
+         tracks the EXACT SAME odds of supplying the next song — the
+         point, back then, was equal representation regardless of catalog
+         size. This fork inverts that on purpose: every individual song
+         currently sitting in the pool gets equal odds instead, so a
+         country's actual presence in the pool is what weights its chance,
+         not its mere presence. The CAP/FIFO eviction, flag bar and FOUND
+         counter above are untouched — they still track and visualize
+         country coverage exactly as before; only this final SELECTION
+         step changes. Also folds in what the old "every 5th track from
+         the unknown pool" special case used to force separately — with a
+         truly flat draw, unknown-country tracks already get picked in
+         proportion to how many of them are actually in the pool, so a
+         hardcoded override would now fight the flat-odds principle rather
+         than serve it. */
       const chosen=candidates.splice(Math.floor(Math.random()*candidates.length),1)[0];
-      /* This candidate can ALSO still be sitting in _unknownPool (every
-         unknown-country find gets pushed to both candidates AND
-         _unknownPool, see discoverCandidates()) or in its own
-         countryStacks[code] bucket — splicing it out of candidates above
-         doesn't touch either of those. Left uncleaned, the exact same
-         object could get drawn a SECOND time later by the dedicated '??'
-         branch below (or a country-weighted draw), landing the identical
-         track in the queue twice. Confirmed live: "New Philanthropist" by
-         Motty Ilowitz queued once via this 'no-country' path, then again
-         minutes later via the '??' path, purely because the stale
-         _unknownPool reference was never cleared out here. */
       if(chosen.code){
         const stack=countryStacks[chosen.code];
         if(stack){ const i=stack.findIndex(c=>c.id===chosen.id); if(i!==-1) stack.splice(i,1); }
@@ -5751,32 +5841,9 @@ async function promoteFromPool(){
         const i=_unknownPool.findIndex(c=>c.id===chosen.id);
         if(i!==-1) _unknownPool.splice(i,1);
       }
-      try{ _queueItem(chosen,'no-country'); }
+      try{ _queueItem(chosen,'rnd'); }
       catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
-      continue;
     }
-
-    /* Every 5th track: pick from unknown pool if available */
-    const totalQueued=count+queue.length;
-    if(totalQueued%5===4 && _unknownPool.length>0){
-      const chosen=_unknownPool.splice(Math.floor(Math.random()*_unknownPool.length),1)[0];
-      const mIdx=candidates.findIndex(c=>c.id===chosen.id);
-      if(mIdx!==-1) candidates.splice(mIdx,1);
-      try{ _queueItem(chosen,'??'); }
-      catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
-      continue;
-    }
-
-    /* True random pick: every country with ≥1 candidate has equal odds */
-    const code=availCountries[Math.floor(Math.random()*availCountries.length)];
-
-    const stack=countryStacks[code];
-    const chosen=stack.splice(Math.floor(Math.random()*stack.length),1)[0];
-    const mIdx=candidates.findIndex(c=>c.id===chosen.id);
-    if(mIdx!==-1) candidates.splice(mIdx,1);
-    try{ _queueItem(chosen,'rnd'); }
-    catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
-  }
   if(queue.length>0&&count===0) updateBtn();
   setBuffer();
   }finally{
