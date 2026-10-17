@@ -2835,7 +2835,10 @@ async function grRandomSearch(){
        ever accepted the first of a 9-row same-country batch anyway — see
        random-track.php's own comment on this. One row per request is the
        same amount of actually-usable work, just without the wasted 8. */
-    const res=await fetch(`${_grApiBase()}random-track.php?n=1`);
+    /* cache:'no-store' belt-and-suspenders alongside random-track.php's own
+       Cache-Control header (reported live: same track repeating after F5,
+       traced to this GET never being marked uncacheable at all before). */
+    const res=await fetch(`${_grApiBase()}random-track.php?n=1`,{cache:'no-store'});
     if(!res.ok) return [];
     const data=await res.json();
     return Array.isArray(data) ? data : [];

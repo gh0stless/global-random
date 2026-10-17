@@ -36,6 +36,15 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
+/* Reported live 17.10.2026 as "same track again after F5": this endpoint
+   never set any cache header at all, leaving a plain GET on the same URL
+   (random-track.php?n=1, no cache-busting param) open to the browser's
+   HTTP cache — which, unlike the in-memory `played` Set in
+   global-random.html, survives a normal page reload. Every response here
+   is meant to be a fresh random draw, so caching it at any layer is
+   always wrong, not just sometimes. */
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
 /* Open on purpose: public, non-sensitive music metadata (Spotify ID,
    title, artist, country), nothing per-user. Needed because the Nextcloud
    deployment (a different host entirely) calls this genuinely cross-
