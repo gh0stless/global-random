@@ -5669,6 +5669,26 @@ async function fetchOneCandidate(){
   }
 }
 
+/* Shared removal helper (17.10.2026) — a candidate committed to something
+   else (about to play, or about to sit in `queue`) is no longer "available"
+   in the general pool, so it needs to come out of all three places that
+   might still reference it: the flat `candidates` array, and whichever of
+   countryStacks[code]/_unknownPool it was also sitting in. Previously
+   inlined separately in promoteFromPool()'s flat draw; factored out here
+   because _drawNextTrack() (see below) now needs the exact same removal
+   for a candidate that ISN'T coming from a random `candidates` splice. */
+function _removeFromPool(cand){
+  const idx=candidates.findIndex(c=>c.id===cand.id);
+  if(idx!==-1) candidates.splice(idx,1);
+  if(cand.code){
+    const stack=countryStacks[cand.code];
+    if(stack){ const i=stack.findIndex(c=>c.id===cand.id); if(i!==-1) stack.splice(i,1); }
+  }else{
+    const i=_unknownPool.findIndex(c=>c.id===cand.id);
+    if(i!==-1) _unknownPool.splice(i,1);
+  }
+}
+
 /* Heartbeat: every 10s check if pool needs refilling — catches edge cases
    where engineRunning got cleared but no track event triggered searchEngine.
    ALSO nudge the queue itself: discoverCandidates() only grows the pool
@@ -5849,14 +5869,8 @@ async function promoteFromPool(){
          proportion to how many of them are actually in the pool, so a
          hardcoded override would now fight the flat-odds principle rather
          than serve it. */
-      const chosen=candidates.splice(Math.floor(Math.random()*candidates.length),1)[0];
-      if(chosen.code){
-        const stack=countryStacks[chosen.code];
-        if(stack){ const i=stack.findIndex(c=>c.id===chosen.id); if(i!==-1) stack.splice(i,1); }
-      }else{
-        const i=_unknownPool.findIndex(c=>c.id===chosen.id);
-        if(i!==-1) _unknownPool.splice(i,1);
-      }
+      const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+      _removeFromPool(chosen);
       try{ _queueItem(chosen,'rnd'); }
       catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
     }
@@ -6672,6 +6686,70 @@ function _pickRandomFromQueue(){
   return picked;
 }
 
+/* NEW RANDOM fork (17.10.2026): replaces the synchronous
+   playDiceSound()+_pickRandomFromQueue()+_animateDiceRoll() trio at the
+   top of playReady() with a two-beat sequence, per direct live feedback:
+   rolling over only the BUFFER_SIZE=2 already-queued items, with a 3rd
+   freshly-fetched one silently backfilled afterward (by promoteFromPool(),
+   scheduled from waitForTrackEnd()'s confirmed-playback branch, well
+   after this pick had already happened), read as "it only rolls over 2,
+   then just takes the 3rd in" — not a real draw.
+
+   New sequence: (1) dice sound + fetchOneCandidate() — draw ONE fresh
+   track into contention FIRST ("nachziehen"); (2) a short, deliberate
+   pause so the two beats read as distinct, not simultaneous; (3) a
+   SECOND dice sound + the chase animation, picking the winner from the
+   combined pool of the 2 already-queued items PLUS the fresh one ("in
+   Queue auswürfeln") — a just-fetched track is now genuinely one of the
+   options being rolled for, not a consolation prize for whichever slot
+   the winner happens to vacate. The two that DON'T win become the new
+   queue/preview pair immediately — no separate backfill needed for the
+   normal case; promoteFromPool() still exists for everything else
+   (startup fill, recovery after a silent-track re-roll) and simply
+   no-ops here since queue is already back at BUFFER_SIZE by the time
+   it's scheduled.
+
+   NOT used by mobileFirstPlay() (still calls _pickRandomFromQueue()
+   above, unchanged) — that path's EC.play() must stay inside the
+   original synchronous click handler to count as a user gesture for
+   mobile autoplay policy (see its own comment: "must be in gesture
+   tick"); an await here would yield back to the event loop and lose
+   that. Only affects the very FIRST track on mobile — every later
+   transition (natural end, PLAY NEXT), on desktop AND mobile, already
+   goes through THIS function via playReady(). */
+async function _drawNextTrack(){
+  playDiceSound(); // "nachziehen" — a fresh card is being drawn into contention
+  const fresh=await fetchOneCandidate();
+  if(fresh) _removeFromPool(fresh); // committed to this draw either way — win or lose, no longer "available" in the general pool
+  await sleep(350); // kurze Pause — lets the two beats read as distinct
+  const original=queue.slice(); // the BUFFER_SIZE items already queued, each with its real stable .slot
+  const contenders=fresh?[...original,fresh]:original; // graceful degrade to a 2-way roll if the fetch failed
+  const diceMs=playDiceSound(); // "in Queue auswürfeln" — the real pick
+  const winner=contenders[Math.floor(Math.random()*contenders.length)];
+  /* Visual landing spot for the chase: the winner's own slot if it was
+     already one of the two visible preview cards, otherwise (the fresh
+     one just won, which was never shown in a box) any slot does just as
+     well — the chase is a suspense flourish either way; the real reveal
+     is the main player loading the winner's cover art right after. */
+  const wasAlreadyQueued=original.includes(winner);
+  const winnerIdx=wasAlreadyQueued?winner.slot:Math.floor(Math.random()*BUFFER_SIZE);
+  const diceAnim=_animateDiceRoll(winnerIdx,diceMs);
+
+  const losers=contenders.filter(c=>c!==winner);
+  const takenSlots=new Set();
+  queue.length=0;
+  losers.forEach(l=>{
+    if(l.slot==null||takenSlots.has(l.slot)){
+      let s=0; while(takenSlots.has(s)) s++;
+      l.slot=s;
+    }
+    takenSlots.add(l.slot);
+    queue.push(l);
+  });
+
+  return {item:winner, diceMs, diceAnim};
+}
+
 function mobileFirstPlay(){
   if(!queue.length||!EC)return;
   if(_transitioning)return; // see its own declaration
@@ -6901,7 +6979,7 @@ function _hideAllInfoCards(){
   $('country-applet').style.display='none';$('label-country').style.display='none';
 }
 
-function playReady(){
+async function playReady(){
   if(!queue.length||!EC)return;
   /* STOP was pressed — every path that can end up here (waitForTrackEnd()'s
      next() via its fallbackTimer, detectSilentTrack()'s auto-retry and
@@ -6989,12 +7067,11 @@ function playReady(){
   $('track-info').classList.remove('track-info-empty');
   $('embed-wrapper').classList.add('empty');
   _hideAllInfoCards();
-  stopSearchTune(); // stop loop AND audio — must happen BEFORE playDiceSound(),
-                     // otherwise the two could briefly overlap if the search
-                     // tune was still mid-clip when this fires
-  const _diceMs=playDiceSound();
-  const item=_pickRandomFromQueue();
-  const _diceAnim=_animateDiceRoll(_lastPickedSlotIdx,_diceMs);
+  stopSearchTune(); // stop loop AND audio — must happen BEFORE the draw's
+                     // own first dice sound, otherwise the two could
+                     // briefly overlap if the search tune was still
+                     // mid-clip when this fires
+  const {item,diceMs:_diceMs,diceAnim:_diceAnim}=await _drawNextTrack();
   playingItem=item;
   played.add(item.id);
   if(played.size>100)played.delete(played.values().next().value);
