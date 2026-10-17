@@ -161,7 +161,13 @@ main,#fixed-footer{position:relative;z-index:1;max-width:640px;margin:0 auto;pad
   body #genre-card{display:none}
   body #label-country{display:none}
   body #country-applet{display:none}
-  body #bubbles{display:none}
+  /* #bubbles (the falling-snow container) used to be hidden here too —
+     removed along with the matching translateAll() restriction
+     (17.10.2026, NEW RANDOM fork: explicitly asked to come back on
+     mobile). Reported live as "kein Schneefall in mobile" even after
+     that JS fix: this plain CSS display:none was a second, independent
+     gate on the exact same effect, still hiding it regardless of
+     translateAll() actually producing real words now. */
   /* Desktop runs an app-shell: body is pinned to exactly 100vh with
      overflow-y:hidden, #scroll-area does the actual scrolling internally,
      and #fixed-footer (stats line + donate banner + hint) stays glued to
