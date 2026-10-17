@@ -6795,14 +6795,24 @@ async function _drawNextTrack(){
      suspense beat left, not an accident. */
   const winner=contenders[Math.floor(Math.random()*contenders.length)];
   const losers=contenders.filter(c=>c!==winner);
+  /* Shuffle before handing out slots (17.10.2026) — requested directly:
+     "echtes Shuffle simulieren... auch die 3. Position ändern kann".
+     The old version always preserved each loser's EXISTING slot where
+     possible, so the two preview cards effectively never swapped places
+     with each other — only the winner ever "moved" (into the main
+     player). A real shuffle should let the losers trade positions too,
+     not just sit still forever whenever they don't win. Fisher-Yates on
+     a 2-3 element array, cheap either way. */
+  for(let i=losers.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [losers[i],losers[j]]=[losers[j],losers[i]];
+  }
   const takenSlots=new Set();
   queue.length=0;
   losers.forEach(l=>{
-    if(l.slot==null||takenSlots.has(l.slot)){
-      let s=0; while(takenSlots.has(s)) s++;
-      l.slot=s;
-    }
-    takenSlots.add(l.slot);
+    let s=0; while(takenSlots.has(s)) s++;
+    l.slot=s;
+    takenSlots.add(s);
     queue.push(l);
   });
   _syncPreviewSlots(); // immediately — see the comment above for why this moved here
