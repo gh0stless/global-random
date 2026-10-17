@@ -2925,7 +2925,28 @@ function _grApiBase(){
   if(/^(crazy-midi\.de|global-random\.radio)$/.test(location.hostname)) return '';
   return 'https://crazy-midi.de/global-random/';
 }
+/* Consecutive-failure guard (17.10.2026): every fetch path (turbo
+   discovery, background refill, nachziehen) goes through here, so one
+   counter covers all of them. A failure = network error, non-OK status,
+   or an empty/invalid body; any good response resets it. At
+   FETCH_FAIL_LIMIT in a row, everything halts with a visible error
+   instead of silently retrying — discovery alone would otherwise keep
+   firing up to 80 requests per run, restarting every 500ms, against a
+   server that's down (exactly the pattern netcup rate-limited us for on
+   13.10.2026). PLAY clears the halt and tries again, see handleBtn(). */
+const FETCH_FAIL_LIMIT=10;
+let _fetchFailStreak=0, _fetchHalted=false;
+function _haltOnFetchFailure(){
+  if(_fetchHalted) return;
+  _fetchHalted=true;
+  console.error(`[fetch] ${FETCH_FAIL_LIMIT} failed fetches in a row — halting`);
+  handleStop();
+  term(BROWSER_LANG==='de'
+    ?'FEHLER: SERVER NICHT ERREICHBAR. PLAY = NEUER VERSUCH.'
+    :'ERROR: SERVER UNREACHABLE. PRESS PLAY TO RETRY.');
+}
 async function grRandomSearch(){
+  if(_fetchHalted) return [];
   try{
     /* n=1, not 9 (13.10.2026): discoverCandidates()'s per-batch dedup only
        ever accepted the first of a 9-row same-country batch anyway — see
@@ -2935,12 +2956,11 @@ async function grRandomSearch(){
        Cache-Control header (reported live: same track repeating after F5,
        traced to this GET never being marked uncacheable at all before). */
     const res=await fetch(`${_grApiBase()}random-track.php?n=1`,{cache:'no-store'});
-    if(!res.ok) return [];
-    const data=await res.json();
-    return Array.isArray(data) ? data : [];
-  }catch(e){
-    return [];
-  }
+    const data=res.ok ? await res.json() : null;
+    if(Array.isArray(data) && data.length){ _fetchFailStreak=0; return data; }
+  }catch(e){}
+  if(++_fetchFailStreak>=FETCH_FAIL_LIMIT) _haltOnFetchFailure();
+  return [];
 }
 
 /* Search for tracks BY COUNTRY via artist filter */
@@ -5307,6 +5327,7 @@ let _lastDiscoveryStartedAt=0;
 const DISCOVERY_MIN_GAP_MS=10000;
 async function discoverCandidates(){
   if(engineRunning)return;
+  if(_fetchHalted)return; // see FETCH_FAIL_LIMIT — stays down until PLAY
   if(Date.now()-_lastDiscoveryStartedAt<DISCOVERY_MIN_GAP_MS)return;
   _lastDiscoveryStartedAt=Date.now();
   if(document.hidden && candidates.length>=POOL_WELL_STOCKED){
@@ -5387,7 +5408,7 @@ async function discoverCandidates(){
        (US/DE/JP...), so a fixed pool size lets 5 large countries fill it
        before rare ones ever get drawn. Discarding capped hits and continuing
        gives every country a real shot, even if the pool grows past 30. */
-    while(!allCountriesCapped() && _batchesThisRun<MAX_BATCHES_PER_RUN){
+    while(!allCountriesCapped() && _batchesThisRun<MAX_BATCHES_PER_RUN && !_fetchHalted){
       try{
         let found, code, histCode=null;
         {
@@ -5607,7 +5628,7 @@ async function discoverCandidates(){
   }finally{
     engineRunning=false;
     /* Always restart if pool not full — regardless of why engine exited */
-    if(!allCountriesCapped()) setTimeout(discoverCandidates,500);
+    if(!allCountriesCapped() && !_fetchHalted) setTimeout(discoverCandidates,500);
   }
 }
 
@@ -6551,6 +6572,7 @@ function handleBtn(){
   clearTimeout(_pressPlayWatchdog); // real click (or the watchdog itself) — either way, no need for it to still fire later
   if(_pressPlayLine){ _pressPlayLine.classList.remove('pulse'); _pressPlayLine=null; }
   _userStopped=false; // any explicit PLAY/PLAY NEXT click cancels a prior STOP
+  if(_fetchHalted){ _fetchHalted=false; _fetchFailStreak=0; } // ...and retries after a fetch-failure halt
   if(count===0) playSamWeCanStart(); // once per session, on the very first PLAY click, same moment regardless of which branch below it then falls into
   /* The frozen "SEARCHING...." terminal line (dots stopped mid-cycle by
      stopSearchingAnimation() back at the READY reveal) otherwise just sits
