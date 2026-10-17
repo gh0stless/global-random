@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GLOBAL RANDOM — Democracy of Sound</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='3' width='26' height='26' rx='6' fill='%230d110d' stroke='%2300ff41' stroke-width='2'/><circle cx='9.5' cy='9.5' r='2.6' fill='%2300ff41'/><circle cx='22.5' cy='9.5' r='2.6' fill='%2300ff41'/><circle cx='16' cy='16' r='2.6' fill='%2300ff41'/><circle cx='9.5' cy='22.5' r='2.6' fill='%2300ff41'/><ellipse cx='18' cy='23.5' rx='5.5' ry='4.3' transform='rotate(-18 18 23.5)' fill='%23ffffff'/><path d='M22.5 24 L22.5 4.2' stroke='%23ffffff' stroke-width='3.4' stroke-linecap='round'/><path d='M22.5 4.2 C27.7 5.3 28.3 9.4 22.5 11.6 C26.1 8.4 25.1 5.9 22.5 4.2 Z' fill='%23ffffff'/></svg>">
+<script>
+/* Apply the saved theme before anything paints — the main script (and
+   its applySavedTheme(), which still handles the toggle icon) only runs
+   at the end of <body>, after the welcome overlay is already drawn, so a
+   saved "light" used to show a dark flash first. Same rule as there:
+   only an explicit "light" overrides the dark default. */
+try{ if(localStorage.getItem('theme')==='light') document.documentElement.setAttribute('data-theme','light'); }catch(_){}
+</script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
 <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <style>
@@ -703,6 +711,19 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
    media query — the exact mirror image of #welcome-instructions. */
 #welcome-mobile-hint{display:none;font-family:'Courier New',monospace;
   font-size:clamp(.7em,3vw,.9em);color:#00ff41;letter-spacing:.02em;opacity:.9}
+/* Light theme for the splash (17.10.2026): follows a saved "light" theme
+   instead of always being green-on-black. Same terminal look, inverted —
+   light background, darker green (#00802b, readable on near-white)
+   instead of the neon #00ff41 that only works on black. Solid colors
+   rather than the dark version's alpha tints, which wash out on light. */
+:root[data-theme="light"] #welcome-overlay{background:radial-gradient(ellipse at center,#ffffff 0%,#e6f5ea 75%)}
+:root[data-theme="light"] #welcome-title{color:#00802b;border-color:#00802b;text-shadow:0 0 10px #00ff4140}
+:root[data-theme="light"] #welcome-instructions,
+:root[data-theme="light"] #welcome-mobile-hint{color:#00802b;opacity:1}
+:root[data-theme="light"] #welcome-sub{color:#1f6f3a;opacity:1}
+:root[data-theme="light"] #welcome-privacy{color:#3d7a52;opacity:1}
+:root[data-theme="light"] #welcome-privacy-link{color:#1f6f3a}
+:root[data-theme="light"] #welcome-privacy-link:hover{color:#00802b}
 </style>
 </head>
 <body>
