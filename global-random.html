@@ -133,7 +133,15 @@ main,#fixed-footer{position:relative;z-index:1;max-width:640px;margin:0 auto;pad
      layer, and one more thing competing for a small screen's attention
      and battery. */
 @media (max-width:899px){
-  body #preview-stack{display:none}
+  /* #preview-stack used to be hidden here too, back when #embed-wrapper
+     (the real player) lived OUTSIDE it as its own separate element — this
+     rule only ever hid the then-extra 2-3 preview cards, mobile always
+     kept its 1 main player regardless. Since the main player merged INTO
+     #preview-stack as its first child (17.10.2026, NEW RANDOM fork),
+     hiding the container here would have hidden the main player too,
+     leaving mobile with NO visible player at all. Explicit instruction:
+     mobile shows the same 3-box layout as desktop now, so this line is
+     gone rather than patched to spare just the first child. */
   body #label-nation{display:none}
   body #flag-bar{display:none}
   /* The "open Spotify in another tab, log in, come back" instructions
@@ -479,6 +487,12 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    above for the fade back to resting dimness once removed. */
 .preview-slot.dice-cycle{opacity:.85;filter:none;box-shadow:0 0 12px 2px var(--purple)}
 .preview-slot.dice-winner{opacity:1;filter:none;box-shadow:0 0 22px 5px var(--green)}
+/* Same glow, no opacity/filter override needed — #embed-wrapper is never
+   dimmed to begin with (17.10.2026, NEW RANDOM fork: the chase now cycles
+   across all 3 fixed card positions, not just the 2 preview slots — see
+   _animateDiceRoll()). */
+#embed-wrapper.dice-cycle{box-shadow:0 0 12px 2px var(--purple)}
+#embed-wrapper.dice-winner{box-shadow:0 0 22px 5px var(--green)}
 
 /* ── Button ── */
 button{width:100%;height:52px;padding:14px;background:var(--purple);
@@ -6632,10 +6646,26 @@ let _lastPickedSlotIdx=null;
    content, so the "reveal" happens once, at the same moment, instead of
    the active slot jumping to the new track while the suspense animation
    is still running underneath it (real bug this fixed: the winner was
-   visibly already playing before the roll had even finished). */
+   visibly already playing before the roll had even finished).
+
+   Cycles across all 3 fixed card positions now, not just the 2 preview
+   slots (17.10.2026, NEW RANDOM fork: "the animation only runs over 2
+   cards" was the direct complaint) — #embed-wrapper is included as
+   slots[0]. It's already blanked (.empty, dashed-border placeholder) by
+   the time this runs (see playReady()'s own top), so it reads as just
+   another empty card slot during the chase, same as the two real preview
+   ones. The roll always lands ON embed-wrapper specifically (winnerIdx
+   is always 0, see _drawNextTrack()) rather than wherever the winning
+   card happened to be sitting before — whichever of the 3 contenders
+   wins, its cover art is what actually loads into embed-wrapper right
+   after this resolves, so landing anywhere else would show the glow on
+   one box and the result in another. This is "die gewählte Karte spielt
+   an ihrem Platz los" in the one sense that's still technically true
+   with a single real Spotify controller: the glow and the actual
+   playback always converge on the SAME box. */
 function _animateDiceRoll(winnerIdx,totalMs){
   if(winnerIdx==null||!totalMs||totalMs<=0)return Promise.resolve();
-  const slots=Array.from({length:BUFFER_SIZE},(_,n)=>$('preview-slot-'+(n+1)));
+  const slots=[$('embed-wrapper'),...Array.from({length:BUFFER_SIZE},(_,n)=>$('preview-slot-'+(n+1)))];
   if(slots.some(s=>!s))return Promise.resolve();
   return new Promise(resolve=>{
     const minStep=50, maxStep=260;
@@ -6726,14 +6756,11 @@ async function _drawNextTrack(){
   const contenders=fresh?[...original,fresh]:original; // graceful degrade to a 2-way roll if the fetch failed
   const diceMs=playDiceSound(); // "in Queue auswürfeln" — the real pick
   const winner=contenders[Math.floor(Math.random()*contenders.length)];
-  /* Visual landing spot for the chase: the winner's own slot if it was
-     already one of the two visible preview cards, otherwise (the fresh
-     one just won, which was never shown in a box) any slot does just as
-     well — the chase is a suspense flourish either way; the real reveal
-     is the main player loading the winner's cover art right after. */
-  const wasAlreadyQueued=original.includes(winner);
-  const winnerIdx=wasAlreadyQueued?winner.slot:Math.floor(Math.random()*BUFFER_SIZE);
-  const diceAnim=_animateDiceRoll(winnerIdx,diceMs);
+  /* Chase always lands on slots[0] == #embed-wrapper (see
+     _animateDiceRoll's own comment) — that's where the winner's cover
+     art actually loads right after this resolves, regardless of which
+     of the 3 contenders it was or which preview box it used to sit in. */
+  const diceAnim=_animateDiceRoll(0,diceMs);
 
   const losers=contenders.filter(c=>c!==winner);
   const takenSlots=new Set();
