@@ -133,7 +133,15 @@ main,#fixed-footer{position:relative;z-index:1;max-width:640px;margin:0 auto;pad
      layer, and one more thing competing for a small screen's attention
      and battery. */
 @media (max-width:899px){
-  body #preview-stack{display:none}
+  /* #preview-stack used to be hidden here too, back when #embed-wrapper
+     (the real player) lived OUTSIDE it as its own separate element — this
+     rule only ever hid the then-extra 2-3 preview cards, mobile always
+     kept its 1 main player regardless. Since the main player merged INTO
+     #preview-stack as its first child (17.10.2026, NEW RANDOM fork),
+     hiding the container here would have hidden the main player too,
+     leaving mobile with NO visible player at all. Explicit instruction:
+     mobile shows the same 3-box layout as desktop now, so this line is
+     gone rather than patched to spare just the first child. */
   body #label-nation{display:none}
   body #flag-bar{display:none}
   /* The "open Spotify in another tab, log in, come back" instructions
@@ -428,7 +436,10 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    it. Toggling .empty and sizing now happen on this untouched wrapper;
    the descendant "iframe" selector still finds Spotify's iframe no
    matter which specific inner node it ends up replacing. */
-#embed-wrapper{height:80px;margin-bottom:8px;flex-shrink:0}
+/* No margin-bottom of its own anymore (17.10.2026) — it now lives INSIDE
+   #preview-stack as that flex column's first child, so the column's own
+   gap:8px already spaces it from the slot below it. */
+#embed-wrapper{height:80px;flex-shrink:0}
 #embed-wrapper iframe{border-radius:10px;width:100%;height:80px;border:none;display:block}
 /* Same treatment as .preview-slot.empty — see playReady()'s comment for
    why the main player needed this too, not just the 3 preview slots. */
@@ -449,7 +460,11 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    show up. pointer-events:none is the actual lock (per Andreas: dimmed
    ones should be un-clickable, not just visually dim) — otherwise a
    click on a dimmed Spotify iframe could start second audio alongside
-   the real one. */
+   the real one. #embed-wrapper (the real, audible player) now sits
+   INSIDE this same container too (17.10.2026) — undimmed, clickable,
+   visually just the first box in the column — but is NOT a .preview-slot
+   itself and gets none of these rules; it keeps its own separate styling
+   right above. */
 #preview-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
 .preview-slot{position:relative;height:80px;border-radius:10px;overflow:hidden;
   flex-shrink:0;opacity:.4;filter:grayscale(.7) brightness(.75);
@@ -472,6 +487,12 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
    above for the fade back to resting dimness once removed. */
 .preview-slot.dice-cycle{opacity:.85;filter:none;box-shadow:0 0 12px 2px var(--purple)}
 .preview-slot.dice-winner{opacity:1;filter:none;box-shadow:0 0 22px 5px var(--green)}
+/* Same glow, no opacity/filter override needed — #embed-wrapper is never
+   dimmed to begin with (17.10.2026, NEW RANDOM fork: the chase now cycles
+   across all 3 fixed card positions, not just the 2 preview slots — see
+   _animateDiceRoll()). */
+#embed-wrapper.dice-cycle{box-shadow:0 0 12px 2px var(--purple)}
+#embed-wrapper.dice-winner{box-shadow:0 0 22px 5px var(--green)}
 
 /* ── Button ── */
 button{width:100%;height:52px;padding:14px;background:var(--purple);
@@ -772,11 +793,15 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
   <div id="t-meta"></div>
 </div>
 
-<div id="embed-wrapper"><div class="embed-frame"></div></div>
+<!-- NEW RANDOM fork (17.10.2026): main player merged visually into the same
+     3-box column as the preview slots — it's now the first, undimmed box,
+     not a separate element above them. Only 2 preview slots remain (was 3)
+     since the main player itself now occupies what used to be slot 1's
+     position; BUFFER_SIZE dropped 3->2 to match (see its own comment). -->
 <div id="preview-stack">
+  <div id="embed-wrapper"><div class="embed-frame"></div></div>
   <div class="preview-slot" id="preview-slot-1"><div class="preview-frame"></div></div>
   <div class="preview-slot" id="preview-slot-2"><div class="preview-frame"></div></div>
-  <div class="preview-slot" id="preview-slot-3"><div class="preview-frame"></div></div>
 </div>
 </div>
 <div id="col-right">
@@ -1296,7 +1321,11 @@ async function localizeUI(){
 }
 
 /* ── State ── */
-const BUFFER_SIZE=3, played=new Set();
+/* 3->2 (17.10.2026, NEW RANDOM fork): the main player merged visually
+   into the preview column as its first (undimmed) box, so only 2 actual
+   PREVIEW slots remain — queue only ever needs to hold 2 not-yet-playing
+   items now, matching them 1:1. See the HTML comment above #preview-stack. */
+const BUFFER_SIZE=2, played=new Set();
 /* How long AFTER a track starts playing before the queue refill (the
    pool→queue draw, with its own dice sound — see _queueItem()) actually
    happens. Deliberately delayed rather than firing immediately — see the
@@ -2678,16 +2707,19 @@ async function checkServiceHealth(){
   return serviceHealth;
 }
 
-/* Three extra, muted-by-design EmbedControllers for the preview stack (see
+/* Two extra, muted-by-design EmbedControllers for the preview stack (see
    #preview-stack) — pure eye-candy/information, never .play()'d. EC
    itself (the real, audible player) is untouched — same single
    controller the whole rest of the playback engine already expects, so
    none of playReady()/handleBtn()/waitForTrackEnd()/etc. needed to
-   change at all. These three mirror the FULL queue (queue[0]/[1]/[2] —
-   BUFFER_SIZE=3, so all three are always shown, matching the "3 bereit"
-   terminal text) via _syncPreviewSlots(), called after every queue
-   mutation. */
-let ECPreview1=null, ECPreview2=null, ECPreview3=null;
+   change at all. These two mirror the queue (queue[0]/[1] —
+   BUFFER_SIZE=2, so both are always shown, matching the dynamic
+   "N bereit" terminal text) via _syncPreviewSlots(), called after every
+   queue mutation. Was three (ECPreview1-3) before the main player merged
+   visually into the preview column as its own first box (17.10.2026,
+   NEW RANDOM fork) — one preview controller became redundant then,
+   dropped along with #preview-slot-3. */
+let ECPreview1=null, ECPreview2=null;
 window.onSpotifyIframeApiReady=IFrameAPI=>{
   IFrameAPI.createController(document.querySelector('#embed-wrapper .embed-frame'),{width:'100%',height:'80',uri:''},
     ctrl=>{
@@ -2701,8 +2733,6 @@ window.onSpotifyIframeApiReady=IFrameAPI=>{
     {width:'100%',height:'80',uri:''}, ctrl=>{ ECPreview1=ctrl; _syncPreviewSlots(); });
   IFrameAPI.createController(document.querySelector('#preview-slot-2 .preview-frame'),
     {width:'100%',height:'80',uri:''}, ctrl=>{ ECPreview2=ctrl; _syncPreviewSlots(); });
-  IFrameAPI.createController(document.querySelector('#preview-slot-3 .preview-frame'),
-    {width:'100%',height:'80',uri:''}, ctrl=>{ ECPreview3=ctrl; _syncPreviewSlots(); });
 };
 /* Mirrors each queued item's STABLE .slot (0/1/2, assigned once in
    _queueItem() — see the comment there) into the three preview
@@ -2733,10 +2763,10 @@ window.onSpotifyIframeApiReady=IFrameAPI=>{
    slot empties, stays empty, and later gets refilled by the specific
    new item _queueItem() assigns that same slot number to — regardless
    of where either item lives in the array. */
-let _prevUri=[undefined,undefined,undefined]; // undefined (not null) so the very first sync always runs and marks empty slots as empty
+let _prevUri=[undefined,undefined]; // undefined (not null) so the very first sync always runs and marks empty slots as empty
 function _syncPreviewSlots(){
-  const ecs=[ECPreview1,ECPreview2,ECPreview3];
-  for(let i=0;i<3;i++){
+  const ecs=[ECPreview1,ECPreview2];
+  for(let i=0;i<BUFFER_SIZE;i++){
     const q=queue.find(item=>item.slot===i);
     const uri=q?('spotify:track:'+q.id):null;
     if(uri===_prevUri[i])continue;
@@ -3174,22 +3204,19 @@ async function translateAll(word, fromLang, preSeeded=[], onProgress=null){
   const key=word+'|'+fromLang;
   if(_transCache.has(key))return _transCache.get(key);
 
-  /* Mobile shows none of this (snow/bubbles hidden, no preview cards) —
-     so the ~87-language MyMemory batch would just be paying full price
-     for translations nobody ever sees. Same logic now applies on desktop
-     too, once we've EMPIRICALLY confirmed preview-only playback (30s
-     clips, not logged in): nobody's going to read 87 exotic snow words
-     before the clip cuts out and the next random track starts anyway —
-     see detectLoginStatus() for how _previewConfirmed gets set. Skip it
+  /* Once we've EMPIRICALLY confirmed preview-only playback (30s clips,
+     not logged in): nobody's going to read 87 exotic snow words before
+     the clip cuts out and the next random track starts anyway — see
+     detectLoginStatus() for how _previewConfirmed gets set. Skip it
      entirely: same shape as the always-included "source word" entry
      below, just without the expensive part.
-     Same reasoning extended to fullscreen (Andreas' call): the falling
-     snow is the one part of this whole app that's genuinely wasted on a
-     small windowed view — checked live via document.fullscreenElement
-     (the #fullscreen-btn wired near localizeUI() above, NOT the F11 kiosk
-     toggle, which the Fullscreen API can't see at all) at the moment each
-     track starts, not re-evaluated mid-track. */
-  if(isMobile || _previewConfirmed || !document.fullscreenElement) return [{word, color:'#ff79c6', lang:fromLang}];
+     The mobile-only and fullscreen-only restrictions that used to sit
+     here too (both Andreas' earlier calls, trading full-language snow
+     for mobile battery and small-window screen space respectively) were
+     explicitly asked to come back out (17.10.2026, NEW RANDOM fork) —
+     full snow now runs on mobile and outside fullscreen too, same as
+     desktop/fullscreen always had it. */
+  if(_previewConfirmed) return [{word, color:'#ff79c6', lang:fromLang}];
 
   const results=[{word, color:'#ff79c6', lang:fromLang}, ...preSeeded];
   const from=fromLang.startsWith('zh')?'zh-CN':fromLang;
@@ -4676,21 +4703,17 @@ async function loadMeta(item){
          for the other half, the startup probe) — fires for every resolved
          item, prefetch or currently-playing alike, so a change is reported
          as soon as it's detected rather than waiting for the next track to
-         actually start. Skipped on mobile/preview-only/non-fullscreen: in
-         all three cases translateAll() intentionally never runs the real
-         batch (cost-saving on mobile/preview, screen-space-saving outside
-         fullscreen — see its own isMobile||_previewConfirmed||!fullscreen
-         guard) and always returns a length-1 result — that's a deliberate
-         skip, not the service being down. Missed this one when fullscreen
-         gating was added: the badge started reading "TRANSLATE: OFF" on
-         every track outside fullscreen even though MyMemory was perfectly
-         reachable (confirmed live: individual per-track translations —
-         step 7's EN/browser-language pair — worked fine the whole time,
-         since those aren't gated on fullscreen, only the ~87-language mass
-         batch is) — a false alarm on every single track, exactly the
-         failure mode this guard already existed to prevent for the other
-         two conditions. */
-      if(!isMobile && !_previewConfirmed && document.fullscreenElement){
+         actually start. Skipped on preview-only playback: translateAll()
+         intentionally never runs the real batch there (cost-saving on
+         content nobody will read before a 30s clip cuts out — see its own
+         _previewConfirmed guard) and always returns a length-1 result —
+         that's a deliberate skip, not the service being down. The mobile/
+         non-fullscreen legs of this guard were removed along with the
+         matching restriction in translateAll() itself (17.10.2026, NEW
+         RANDOM fork: both explicitly asked to come back out) — the real
+         batch runs on mobile and outside fullscreen now too, so there's
+         nothing deliberate left to shield from a false alarm there. */
+      if(!_previewConfirmed){
         _reportTranslationHealth(item.allWords.length>1);
       }
 
@@ -5580,6 +5603,99 @@ async function discoverCandidates(){
   }
 }
 
+/* NEW RANDOM fork (17.10.2026): a single, independent fetch-and-resolve
+   cycle, called from promoteFromPool() right before every draw — see its
+   own comment there for why. Deliberately NOT a slice of discoverCandidates()
+   reused in place: that function's per-candidate logic is wrapped in a lot
+   of BATCH-level bookkeeping (_batchCountriesUsed/_batchArtistsUsed/
+   _batchReleasesUsed, the abandon-after-3-consecutive-skips counter,
+   MAX_ACCEPTED_PER_BATCH) that only ever existed to stop CLUMPING within
+   one multi-row response — moot here, since grRandomSearch() already
+   fetches exactly one row per call (default n=1, see its own history).
+   Everything below this point mirrors discoverCandidates()'s per-candidate
+   acceptance logic (country whitelist, HISTORICAL_CAPITALS carve-out,
+   title/length checks, session cap, CAP/FIFO eviction, flag bar) so a
+   candidate ends up in EXACTLY the same shape and the EXACT same
+   candidates/countryStacks/_unknownPool structures either way — just
+   without the batch-clumping machinery this single-row path doesn't need.
+   Never throws: a failed fetch here just means this particular draw runs
+   on whatever was already in the pool, same as before this fork. */
+async function fetchOneCandidate(){
+  try{
+    const rows=await grRandomSearch();
+    const f=rows[0];
+    if(!f || played.has(f.id) || candidates.some(c=>c.id===f.id)) return null;
+
+    const found={id:f.id, title:f.title, recId:null, artist:f.artist||'', release:null};
+    const code=(f.country && isRealCountryCode(f.country)) ? f.country : null;
+    const rawUpper=f.country?.toUpperCase();
+    const histCode=(!code && rawUpper && HISTORICAL_CAPITALS[rawUpper]) ? rawUpper : null;
+
+    if(shouldSkip(found.title)) return null;
+    const word=cleanTitle(found.title);
+    if(!word || word.length<2) return null;
+
+    const SESSION_CAP=CAP*3;
+    const sessionCount=countSeen[code]||0;
+    if(code && sessionCount>=SESSION_CAP) return null;
+
+    const cand={id:found.id, title:found.title, word, code, histCode, recId:found.recId, artist:found.artist};
+
+    if(code){
+      if(!countryStacks[code]) countryStacks[code]=[];
+      const countryCount=candidates.filter(c=>c.code===code).length;
+      if(countryCount>=CAP){
+        const oldest=countryStacks[code].shift();
+        if(oldest){
+          const oIdx=candidates.findIndex(c=>c.id===oldest.id);
+          if(oIdx!==-1) candidates.splice(oIdx,1);
+        }
+      }
+      candidates.push(cand);
+      countryStacks[code].push(cand);
+      _poolLastUpdate[code]=Date.now();
+      _registerFound(code);
+    }else{
+      if(_unknownPool.length>=CAP){
+        const oldest=_unknownPool.shift();
+        if(oldest){
+          const oIdx=candidates.findIndex(c=>c.id===oldest.id);
+          if(oIdx!==-1) candidates.splice(oIdx,1);
+        }
+      }
+      candidates.push(cand);
+      _unknownPool.push(cand);
+      _poolLastUpdate['??']=Date.now();
+      _registerFound('??');
+    }
+    updateFlagBar();
+    return cand;
+  }catch(e){
+    console.error('[fetchOneCandidate] failed, continuing with existing pool:',e);
+    return null;
+  }
+}
+
+/* Shared removal helper (17.10.2026) — a candidate committed to something
+   else (about to play, or about to sit in `queue`) is no longer "available"
+   in the general pool, so it needs to come out of all three places that
+   might still reference it: the flat `candidates` array, and whichever of
+   countryStacks[code]/_unknownPool it was also sitting in. Previously
+   inlined separately in promoteFromPool()'s flat draw; factored out here
+   because _drawNextTrack() (see below) now needs the exact same removal
+   for a candidate that ISN'T coming from a random `candidates` splice. */
+function _removeFromPool(cand){
+  const idx=candidates.findIndex(c=>c.id===cand.id);
+  if(idx!==-1) candidates.splice(idx,1);
+  if(cand.code){
+    const stack=countryStacks[cand.code];
+    if(stack){ const i=stack.findIndex(c=>c.id===cand.id); if(i!==-1) stack.splice(i,1); }
+  }else{
+    const i=_unknownPool.findIndex(c=>c.id===cand.id);
+    if(i!==-1) _unknownPool.splice(i,1);
+  }
+}
+
 /* Heartbeat: every 10s check if pool needs refilling — catches edge cases
    where engineRunning got cleared but no track event triggered searchEngine.
    ALSO nudge the queue itself: discoverCandidates() only grows the pool
@@ -5611,13 +5727,14 @@ const _appLoadedAt=Date.now();
    something that was never going to happen — exactly the bug this whole
    condition-based approach was meant to avoid.
 
-   Backstop shortened 5min→2min (17.10.2026): allCountriesFound() reliably
-   goes true well under 2 minutes in practice (reported live), so the
-   5-minute value only ever mattered as a ceiling nothing was actually
-   hitting — 2 minutes is still generous headroom above the observed
-   real-world fill time without leaving turbo mode running needlessly
-   long on the rare session where discovery is unusually slow. */
-const DISCOVERY_WARMUP_MAX_MS=120000; // hard cap: 2 minutes of full speed, no matter what
+   Backstop shortened 5min→2min→1min (17.10.2026): allCountriesFound()
+   reliably goes true well under even 1 minute in practice (reported
+   live), so the longer values only ever mattered as a ceiling nothing
+   was actually hitting. On the new-random fork specifically, pool
+   discovery is further topped up by fetchOneCandidate() on every single
+   draw (see promoteFromPool()) on top of this warm-up window, so there's
+   even less reason for the backstop itself to stay long. */
+const DISCOVERY_WARMUP_MAX_MS=60000; // hard cap: 1 minute of full speed, no matter what
 const DISCOVERY_IDLE_EVERY_N_TICKS=6; // after warm-up ends: one in every 6 ticks (~60s)
 let _heartbeatTicks=0;
 setInterval(()=>{
@@ -5642,12 +5759,12 @@ setInterval(()=>{
 function _checkQueueConsistency(){
   if(_transitioning) return;
   let filledPreview=0;
-  for(let i=1;i<=3;i++){
+  for(let i=1;i<=BUFFER_SIZE;i++){
     const el=$('preview-slot-'+i);
     if(el && !el.classList.contains('empty')) filledPreview++;
   }
   if(filledPreview!==queue.length){
-    console.warn(`[consistency] queue.length=${queue.length} but ${filledPreview}/3 preview slots are non-empty`);
+    console.warn(`[consistency] queue.length=${queue.length} but ${filledPreview}/${BUFFER_SIZE} preview slots are non-empty`);
     /* Self-heal: the DOM only gets resynced at fixed points (after the dice
        animation, after tryPlay()), so a queue that drains without a following
        sync leaves stale preview cards on screen indefinitely. _syncPreviewSlots()
@@ -5719,7 +5836,7 @@ async function promoteFromPool(){
       if(candidates.length<3) return; // not enough variety yet — discovery keeps running, try again next call
       _firstPromoteDiversityMet=true;
     }
-    while(queue.length<BUFFER_SIZE && candidates.length>0){
+    while(queue.length<BUFFER_SIZE){
       /* Small yield after each queue step so the browser actually gets a
          chance to repaint between them. Without this, once the diversity
          gate above is satisfied, this loop fills 0→BUFFER_SIZE in one
@@ -5727,56 +5844,43 @@ async function promoteFromPool(){
          at each step, but the browser never paints the intermediate values,
          so it visually looks like a jump straight from 0/3 to 3/3. */
       if(queue.length>0) await sleep(150);
-      const availCountries=Object.keys(countryStacks).filter(c=>countryStacks[c].length>0);
 
-    /* No country-tagged candidates → pick any */
-    if(availCountries.length===0){
+      /* NEW RANDOM fork (17.10.2026): one fresh single-track fetch BEFORE
+         every single draw, not just on the heartbeat/track-change triggers
+         that top up the pool in the background anyway. Purpose, stated
+         directly: a track that was JUST discovered this instant should have
+         a real (if small, pool-size-dependent) chance of being the very
+         next thing that plays, instead of only ever reachable once its
+         "turn" comes up some indefinite time later. Failure here (network
+         hiccup) just means this particular draw runs on whatever was
+         already in the pool — fetchOneCandidate() never throws. */
+      await fetchOneCandidate();
       if(candidates.length===0) break;
-      const chosen=candidates.splice(Math.floor(Math.random()*candidates.length),1)[0];
-      /* This candidate can ALSO still be sitting in _unknownPool (every
-         unknown-country find gets pushed to both candidates AND
-         _unknownPool, see discoverCandidates()) or in its own
-         countryStacks[code] bucket — splicing it out of candidates above
-         doesn't touch either of those. Left uncleaned, the exact same
-         object could get drawn a SECOND time later by the dedicated '??'
-         branch below (or a country-weighted draw), landing the identical
-         track in the queue twice. Confirmed live: "New Philanthropist" by
-         Motty Ilowitz queued once via this 'no-country' path, then again
-         minutes later via the '??' path, purely because the stale
-         _unknownPool reference was never cleared out here. */
-      if(chosen.code){
-        const stack=countryStacks[chosen.code];
-        if(stack){ const i=stack.findIndex(c=>c.id===chosen.id); if(i!==-1) stack.splice(i,1); }
-      }else{
-        const i=_unknownPool.findIndex(c=>c.id===chosen.id);
-        if(i!==-1) _unknownPool.splice(i,1);
-      }
-      try{ _queueItem(chosen,'no-country'); }
+
+      /* Flat draw across the ENTIRE combined pool (every country-tagged
+         candidate AND every unknown-country one, all in one array) —
+         replaces the old two-step "pick a country uniformly, THEN a song
+         from it" fairness model. That old model deliberately gave a
+         country with 1 pooled track and a country with CAP=6 pooled
+         tracks the EXACT SAME odds of supplying the next song — the
+         point, back then, was equal representation regardless of catalog
+         size. This fork inverts that on purpose: every individual song
+         currently sitting in the pool gets equal odds instead, so a
+         country's actual presence in the pool is what weights its chance,
+         not its mere presence. The CAP/FIFO eviction, flag bar and FOUND
+         counter above are untouched — they still track and visualize
+         country coverage exactly as before; only this final SELECTION
+         step changes. Also folds in what the old "every 5th track from
+         the unknown pool" special case used to force separately — with a
+         truly flat draw, unknown-country tracks already get picked in
+         proportion to how many of them are actually in the pool, so a
+         hardcoded override would now fight the flat-odds principle rather
+         than serve it. */
+      const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+      _removeFromPool(chosen);
+      try{ _queueItem(chosen,'rnd'); }
       catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
-      continue;
     }
-
-    /* Every 5th track: pick from unknown pool if available */
-    const totalQueued=count+queue.length;
-    if(totalQueued%5===4 && _unknownPool.length>0){
-      const chosen=_unknownPool.splice(Math.floor(Math.random()*_unknownPool.length),1)[0];
-      const mIdx=candidates.findIndex(c=>c.id===chosen.id);
-      if(mIdx!==-1) candidates.splice(mIdx,1);
-      try{ _queueItem(chosen,'??'); }
-      catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
-      continue;
-    }
-
-    /* True random pick: every country with ≥1 candidate has equal odds */
-    const code=availCountries[Math.floor(Math.random()*availCountries.length)];
-
-    const stack=countryStacks[code];
-    const chosen=stack.splice(Math.floor(Math.random()*stack.length),1)[0];
-    const mIdx=candidates.findIndex(c=>c.id===chosen.id);
-    if(mIdx!==-1) candidates.splice(mIdx,1);
-    try{ _queueItem(chosen,'rnd'); }
-    catch(e){ console.error('[promoteFromPool] _queueItem failed, continuing:',e); }
-  }
   if(queue.length>0&&count===0) updateBtn();
   setBuffer();
   }finally{
@@ -5805,14 +5909,15 @@ function _queueItem(chosen, tag){
      same country too if it still has other candidates waiting. */
   countSeen[code]=(countSeen[code]||0)+1; // session-cumulative, feeds cap in discoverCandidates
   const color=randomColor();
-  /* Stable visual slot (0/1/2), NOT array position — see the big comment
-     on _syncPreviewSlots() for why these had to be decoupled. Find the
-     first of the three slot numbers not currently held by anything still
-     in `queue` and claim it; this specific item stays visually pinned to
-     that slot for its whole time in the queue, however `queue` itself
-     gets reordered by later splices elsewhere. */
+  /* Stable visual slot (0/1, was 0/1/2 pre-merge), NOT array position —
+     see the big comment on _syncPreviewSlots() for why these had to be
+     decoupled. Find the first of the BUFFER_SIZE slot numbers not
+     currently held by anything still in `queue` and claim it; this
+     specific item stays visually pinned to that slot for its whole time
+     in the queue, however `queue` itself gets reordered by later splices
+     elsewhere. */
   const takenSlots=new Set(queue.map(q=>q.slot));
-  let slot=0; while(takenSlots.has(slot) && slot<3) slot++;
+  let slot=0; while(takenSlots.has(slot) && slot<BUFFER_SIZE) slot++;
   /* Provisional display name from the country CODE discovery already
      resolved — cheap, local, no network call (CAPITALS/COUNTRY_NAME_DICTS
      lookups, same helper loadCountryInfo() already uses for the LAND
@@ -6534,10 +6639,26 @@ let _lastPickedSlotIdx=null;
    content, so the "reveal" happens once, at the same moment, instead of
    the active slot jumping to the new track while the suspense animation
    is still running underneath it (real bug this fixed: the winner was
-   visibly already playing before the roll had even finished). */
+   visibly already playing before the roll had even finished).
+
+   Cycles across all 3 fixed card positions now, not just the 2 preview
+   slots (17.10.2026, NEW RANDOM fork: "the animation only runs over 2
+   cards" was the direct complaint) — #embed-wrapper is included as
+   slots[0]. It's already blanked (.empty, dashed-border placeholder) by
+   the time this runs (see playReady()'s own top), so it reads as just
+   another empty card slot during the chase, same as the two real preview
+   ones. The roll always lands ON embed-wrapper specifically (winnerIdx
+   is always 0, see _drawNextTrack()) rather than wherever the winning
+   card happened to be sitting before — whichever of the 3 contenders
+   wins, its cover art is what actually loads into embed-wrapper right
+   after this resolves, so landing anywhere else would show the glow on
+   one box and the result in another. This is "die gewählte Karte spielt
+   an ihrem Platz los" in the one sense that's still technically true
+   with a single real Spotify controller: the glow and the actual
+   playback always converge on the SAME box. */
 function _animateDiceRoll(winnerIdx,totalMs){
   if(winnerIdx==null||!totalMs||totalMs<=0)return Promise.resolve();
-  const slots=[1,2,3].map(n=>$('preview-slot-'+n));
+  const slots=[$('embed-wrapper'),...Array.from({length:BUFFER_SIZE},(_,n)=>$('preview-slot-'+(n+1)))];
   if(slots.some(s=>!s))return Promise.resolve();
   return new Promise(resolve=>{
     const minStep=50, maxStep=260;
@@ -6555,7 +6676,7 @@ function _animateDiceRoll(winnerIdx,totalMs){
         resolve();
         return;
       }
-      slots[i%3].classList.add('dice-cycle');
+      slots[i%slots.length].classList.add('dice-cycle');
       const progress=Math.min(1,elapsed/totalMs);
       const step=Math.min(remaining, minStep+(maxStep-minStep)*progress*progress); // ease-out — starts fast, slows near the end
       elapsed+=step;
@@ -6586,6 +6707,110 @@ function _pickRandomFromQueue(){
   _lastPickedSlotIdx=chosen.slot;
   const picked=queue.splice(idx,1)[0];
   return picked;
+}
+
+/* NEW RANDOM fork (17.10.2026): replaces the synchronous
+   playDiceSound()+_pickRandomFromQueue()+_animateDiceRoll() trio at the
+   top of playReady() with a two-beat sequence, per direct live feedback:
+   rolling over only the BUFFER_SIZE=2 already-queued items, with a 3rd
+   freshly-fetched one silently backfilled afterward (by promoteFromPool(),
+   scheduled from waitForTrackEnd()'s confirmed-playback branch, well
+   after this pick had already happened), read as "it only rolls over 2,
+   then just takes the 3rd in" — not a real draw.
+
+   New sequence: (1) dice sound + fetchOneCandidate() — draw ONE fresh
+   track into contention FIRST ("nachziehen"); (2) a short, deliberate
+   pause so the two beats read as distinct, not simultaneous; (3) a
+   SECOND dice sound + the chase animation, picking the winner from the
+   combined pool of the 2 already-queued items PLUS the fresh one ("in
+   Queue auswürfeln") — a just-fetched track is now genuinely one of the
+   options being rolled for, not a consolation prize for whichever slot
+   the winner happens to vacate. The two that DON'T win become the new
+   queue/preview pair immediately — no separate backfill needed for the
+   normal case; promoteFromPool() still exists for everything else
+   (startup fill, recovery after a silent-track re-roll) and simply
+   no-ops here since queue is already back at BUFFER_SIZE by the time
+   it's scheduled.
+
+   NOT used by mobileFirstPlay() (still calls _pickRandomFromQueue()
+   above, unchanged) — that path's EC.play() must stay inside the
+   original synchronous click handler to count as a user gesture for
+   mobile autoplay policy (see its own comment: "must be in gesture
+   tick"); an await here would yield back to the event loop and lose
+   that. Only affects the very FIRST track on mobile — every later
+   transition (natural end, PLAY NEXT), on desktop AND mobile, already
+   goes through THIS function via playReady(). */
+async function _drawNextTrack(){
+  const _t0=Date.now();
+  const _nachziehMs=playDiceSound(); // "nachziehen" — a fresh card is being drawn into contention
+  const fresh=await fetchOneCandidate();
+  if(fresh) _removeFromPool(fresh); // committed to this draw either way — win or lose, no longer "available" in the general pool
+  /* Stays .empty (dashed, hidden iframe) for the WHOLE duration of this
+     sound, no matter how fast fetchOneCandidate() resolves — reported
+     live: the card used to pop in as soon as the fetch finished, which
+     on a fast connection could be well before the sound itself had
+     finished playing. "bevor die neue Karte auftaucht muss leer sein in
+     der Zeit wo der Sound spielt": wait out whatever's actually left of
+     THIS throw's real, randomized duration (~1.3-2.3s, see
+     playDiceSound()'s own comment) — fetch latency already eats into
+     that window — before revealing anything. */
+  const _remaining=_nachziehMs-(Date.now()-_t0);
+  if(_remaining>0) await sleep(_remaining);
+  /* Only NOW, with the sound actually finished, show the drawn card —
+     right in the vacated embed-wrapper slot, dimmed like any other
+     pending preview card (reusing .preview-slot's own resting style
+     rather than inventing a new one; #embed-wrapper has no id/class
+     clash with it). embed-wrapper's own .empty (added unconditionally at
+     the top of playReady(), before this ever runs) has to come off here
+     too, or the dimmed card would ALSO be invisible (opacity:0 is
+     stronger than the dimming). Gets undone (both the dimming and, if
+     this card didn't win, the content itself) once the roll actually
+     lands — see playReady()'s own call site. */
+  if(fresh){
+    EC.loadUri('spotify:track:'+fresh.id);
+    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
+    $('embed-wrapper').classList.add('preview-slot');
+  }
+  await sleep(350); // kurze Pause — after the reveal, before beat 2, so the two beats read as distinct
+  const original=queue.slice(); // the BUFFER_SIZE items already queued, each with its real stable .slot
+  const contenders=fresh?[...original,fresh]:original; // graceful degrade to a 2-way roll if the fetch failed
+  const diceMs=playDiceSound(); // "in Queue auswürfeln" — the real pick
+  /* The REAL roll — decided instantly, right here, same as it always
+     was. What changed (17.10.2026): everything that FOLLOWS from this
+     decision now also happens immediately, in the same breath, instead
+     of being held back until the chase animation finishes. Reported
+     live twice: "neue Karte kommt erst nach der Animation" and "echtes
+     Würfeln und Angezeigtes soll zeitnah sein" — both were the same root
+     cause, the queue rebuild + _syncPreviewSlots() call used to sit in
+     playReady(), gated behind `await diceAnim`. The two cards that did
+     NOT win settle into their slots and become visible right now; only
+     the WINNER's reveal (embed-wrapper's actual cover art / EC.loadUri)
+     still waits for the chase to land — that part is the one deliberate
+     suspense beat left, not an accident. */
+  const winner=contenders[Math.floor(Math.random()*contenders.length)];
+  const losers=contenders.filter(c=>c!==winner);
+  const takenSlots=new Set();
+  queue.length=0;
+  losers.forEach(l=>{
+    if(l.slot==null||takenSlots.has(l.slot)){
+      let s=0; while(takenSlots.has(s)) s++;
+      l.slot=s;
+    }
+    takenSlots.add(l.slot);
+    queue.push(l);
+  });
+  _syncPreviewSlots(); // immediately — see the comment above for why this moved here
+
+  /* Chase always lands on slots[0] == #embed-wrapper (see
+     _animateDiceRoll's own comment) — that's where the winner's cover
+     art actually loads right after this resolves, regardless of which
+     of the 3 contenders it was or which preview box it used to sit in.
+     Started AFTER the real decision/preview sync above, not before —
+     it's cosmetic suspense layered on top of already-final state, not a
+     gate the real update has to wait behind. */
+  const diceAnim=_animateDiceRoll(0,diceMs);
+
+  return {item:winner, diceMs, diceAnim};
 }
 
 function mobileFirstPlay(){
@@ -6817,7 +7042,7 @@ function _hideAllInfoCards(){
   $('country-applet').style.display='none';$('label-country').style.display='none';
 }
 
-function playReady(){
+async function playReady(){
   if(!queue.length||!EC)return;
   /* STOP was pressed — every path that can end up here (waitForTrackEnd()'s
      next() via its fallbackTimer, detectSilentTrack()'s auto-retry and
@@ -6905,12 +7130,11 @@ function playReady(){
   $('track-info').classList.remove('track-info-empty');
   $('embed-wrapper').classList.add('empty');
   _hideAllInfoCards();
-  stopSearchTune(); // stop loop AND audio — must happen BEFORE playDiceSound(),
-                     // otherwise the two could briefly overlap if the search
-                     // tune was still mid-clip when this fires
-  const _diceMs=playDiceSound();
-  const item=_pickRandomFromQueue();
-  const _diceAnim=_animateDiceRoll(_lastPickedSlotIdx,_diceMs);
+  stopSearchTune(); // stop loop AND audio — must happen BEFORE the draw's
+                     // own first dice sound, otherwise the two could
+                     // briefly overlap if the search tune was still
+                     // mid-clip when this fires
+  const {item,diceMs:_diceMs,diceAnim:_diceAnim}=await _drawNextTrack();
   playingItem=item;
   played.add(item.id);
   if(played.size>100)played.delete(played.values().next().value);
@@ -6977,9 +7201,12 @@ function playReady(){
        before playback actually starts, so this is genuinely "something is
        here now", not a premature reveal. embed-wrapper-blank is cleared
        alongside it — a no-op unless the intro-skip empty-queue fallback
-       added it (see finish() in _playWEIntro()). */
-    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
-    EC.loadUri('spotify:track:'+item.id);
+       added it (see finish() in _playWEIntro()). 'preview-slot' is cleared
+       too — a no-op unless _drawNextTrack() dimmed embed-wrapper for the
+       pending-card preview during the roll (see its own comment); either
+       way this is the moment that card's fate is settled, win or lose. */
+    $('embed-wrapper').classList.remove('empty','embed-wrapper-blank','preview-slot');
+    EC.loadUri('spotify:track:'+item.id); // always re-set, even if this is the SAME uri _drawNextTrack() already loaded for the pending preview — a harmless no-op-ish reload at worst, same as _syncPreviewSlots() already assumes elsewhere
     /* Tried shortening this to 150ms on the theory that it was pure
        connection-speed padding — WRONG, and confirmed wrong the hard way:
        at 150ms, EC.play() reliably no-ops (doesn't throw, so tryPlay()'s
