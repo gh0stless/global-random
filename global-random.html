@@ -500,6 +500,17 @@ header h1{font-family:'C64','Courier New',monospace;font-size:clamp(.8em,3.5vw,1
 #embed-wrapper.dice-cycle{box-shadow:0 0 12px 2px var(--purple)}
 #embed-wrapper.dice-winner{box-shadow:0 0 22px 5px var(--green)}
 
+/* ── Error card: shown when the server can't be reached (see
+   FETCH_FAIL_LIMIT) — plain-language, for people who'd never look at the
+   terminal or the console. Above everything except the welcome overlay. */
+#error-card{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);padding:16px;box-sizing:border-box}
+#error-card-inner{width:100%;max-width:420px;background:var(--surface);border:2px solid var(--red);
+  border-radius:12px;padding:22px 20px;text-align:center;box-shadow:0 0 24px rgba(248,113,113,.35)}
+#error-card-title{font-family:'C64','Courier New',monospace;color:var(--red);font-size:1.05em;
+  letter-spacing:.08em;margin-bottom:12px}
+#error-card-text{color:var(--text);font-size:.9em;line-height:1.5;margin:0 0 18px}
+
 /* ── Button ── */
 button{width:100%;height:52px;padding:14px;background:var(--purple);
   border:1px solid var(--purple);color:#fff;font-family:inherit;
@@ -735,6 +746,13 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;
   </div>
 </div>
 <div id="bubbles"></div>
+<div id="error-card" role="alertdialog" aria-live="assertive" aria-labelledby="error-card-title" style="display:none">
+  <div id="error-card-inner">
+    <div id="error-card-title"></div>
+    <p id="error-card-text"></p>
+    <button id="error-card-btn" type="button" onclick="_retryAfterFetchHalt()"></button>
+  </div>
+</div>
 <div id="flag-tip"></div>
 <div id="scroll-area">
 <main>
@@ -2941,9 +2959,28 @@ function _haltOnFetchFailure(){
   _fetchHalted=true;
   console.error(`[fetch] ${FETCH_FAIL_LIMIT} failed fetches in a row — halting`);
   handleStop();
-  term(BROWSER_LANG==='de'
-    ?'FEHLER: SERVER NICHT ERREICHBAR. PLAY = NEUER VERSUCH.'
-    :'ERROR: SERVER UNREACHABLE. PRESS PLAY TO RETRY.');
+  const de=BROWSER_LANG==='de';
+  term(de?'FEHLER: SERVER NICHT ERREICHBAR. PLAY = NEUER VERSUCH.'
+         :'ERROR: SERVER UNREACHABLE. PRESS PLAY TO RETRY.');
+  $('error-card-title').textContent=de?'SERVICE NICHT ERREICHBAR':'SERVICE UNAVAILABLE';
+  $('error-card-text').textContent=de
+    ?'GLOBAL RANDOM kann gerade keine neuen Songs laden — unser Server antwortet nicht. Das liegt nicht an dir. Bitte versuch es in ein paar Minuten noch einmal.'
+    :"GLOBAL RANDOM can't load new songs right now — our server isn't responding. It's not you. Please try again in a few minutes.";
+  $('error-card-btn').textContent=de?'ERNEUT VERSUCHEN':'TRY AGAIN';
+  $('error-card').style.display='flex';
+}
+/* "Erneut versuchen" on the error card. Mid-session (something has
+   already played) it's the same as pressing PLAY: playback continues
+   with the next draw. Still in the very first search phase (nothing
+   played yet), it only resumes searching — the normal PLAY / intro flow
+   then follows as usual. If the server is still down, 10 more failures
+   bring the card straight back. */
+function _retryAfterFetchHalt(){
+  $('error-card').style.display='none';
+  _fetchHalted=false; _fetchFailStreak=0;
+  _lastDiscoveryStartedAt=0; // skip the min-gap guard, this is an explicit retry
+  if(count>0){ handleBtn(); }
+  else { _userStopped=false; discoverCandidates(); }
 }
 async function grRandomSearch(){
   if(_fetchHalted) return [];
@@ -6572,7 +6609,7 @@ function handleBtn(){
   clearTimeout(_pressPlayWatchdog); // real click (or the watchdog itself) — either way, no need for it to still fire later
   if(_pressPlayLine){ _pressPlayLine.classList.remove('pulse'); _pressPlayLine=null; }
   _userStopped=false; // any explicit PLAY/PLAY NEXT click cancels a prior STOP
-  if(_fetchHalted){ _fetchHalted=false; _fetchFailStreak=0; } // ...and retries after a fetch-failure halt
+  if(_fetchHalted){ _fetchHalted=false; _fetchFailStreak=0; $('error-card').style.display='none'; } // ...and retries after a fetch-failure halt
   if(count===0) playSamWeCanStart(); // once per session, on the very first PLAY click, same moment regardless of which branch below it then falls into
   /* The frozen "SEARCHING...." terminal line (dots stopped mid-cycle by
      stopSearchingAnimation() back at the READY reveal) otherwise just sits
