@@ -1952,6 +1952,14 @@ const CAPITALS = {
 const HISTORICAL_CAPITALS = {
   SU:{name:'Moscow',wiki:'Soviet_Union',lat:55.7558,lon:37.6173},
   YU:{name:'Belgrade',wiki:'Yugoslavia',lat:44.7866,lon:20.4489},
+  /* MusicBrainz's own codes for these two, NOT their withdrawn ISO codes
+     (that would be DD/CS) — MB tags its East Germany area (1949-1990) as
+     XG and Czechoslovakia (1918-1992) as XC, confirmed via MB's area API.
+     Same treatment as SU/YU above. The other two MB X-codes in gr_tracks
+     stay unknown on purpose: XE is "Europe", XW is "[Worldwide]" — not
+     states, no single wiki article or capital that would be honest here. */
+  XG:{name:'East Berlin',wiki:'East_Germany',lat:52.5200,lon:13.4050},
+  XC:{name:'Prague',wiki:'Czechoslovakia',lat:50.0755,lon:14.4378},
 };
 
 /* Country code → German display name (for the DE wiki/weather panel) */
@@ -1968,14 +1976,14 @@ const COUNTRY_DE = {AF:'Afghanistan',AL:'Albanien',DZ:'Algerien',AD:'Andorra',AO
   IO:'Britisches Territorium im Indischen Ozean',NF:'Norfolkinsel',
   PN:'Pitcairninseln',SH:'St. Helena',WF:'Wallis und Futuna',
   /* Historical, not in COUNTRIES — see HISTORICAL_CAPITALS */
-  SU:'Sowjetunion',YU:'Jugoslawien'};
+  SU:'Sowjetunion',YU:'Jugoslawien',XG:'DDR',XC:'Tschechoslowakei'};
 
 /* Country code -> Arabic display name, fetched via tools/test.html (batch MyMemory
    run over VPN to dodge the dev machine's exhausted quota). Six entries MyMemory had
    no translation for (fell back to English) and one wrong match (Cook Islands got the
    Marshall Islands translation) were corrected by hand against ar.wikipedia.org. */
 const COUNTRY_AR={CN:'الصين',JP:'اليابان',KR:'كوريا الجنوبية',IN:'الهند',BD:'بنغلاديش',VN:'فيتنام',TH:'تايلاند',ID:'إندونيسيا',MY:'ماليزيا',PH:'الفلبين',MN:'منغوليا',NP:'نيبال',PK:'باكستان',EG:'مصر',SA:'المملكة العربية السعودية',AE:'دولة الإمارات العربية المتحدة',MA:'المغرب',LB:'لبنان',JO:'الأردن',DZ:'الجزائر',TN:'تونس',IQ:'العراق',SY:'سوريا',LY:'ليبيا',YE:'اليمن',OM:'عُمان',KW:'الكويت',QA:'قطر',BH:'البحرين',SD:'السودان',IR:'إيران',IL:'إسرائيل',TR:'تركيا',AZ:'أذربيجان',KZ:'كازاخستان',AM:'أرمينيا',GE:'جورجيا',FR:'فرنسا',ES:'إسبانيا',BR:'البرازيل',IT:'إيطاليا',RO:'رومانيا',HT:'هاييتي',DE:'ألمانيا',NL:'هولندا',SE:'السويد',NO:'النرويج',DK:'الدنمارك',IS:'آيسلندا',ZA:'جنوب أفريقيا',RU:'روسيا',PL:'بولندا',CZ:'جمهورية التشيك',SK:'سلوفاكيا',UA:'أوكرانيا',BG:'بلغاريا',HR:'كرواتيا',RS:'صربيا',SI:'سلوفينيا',MK:'مقدونيا الشمالية',GR:'اليونان',HU:'المجر',FI:'فنلندا',EE:'استونيا',LV:'لاتفيا',LT:'ليتوانيا',AL:'ألبانيا',MT:'مالطا',IE:'أيرلندا',GB:'المملكة المتحدة',KE:'كينيا',NG:'نيجيريا',ET:'إثيوبيا',SO:'الصومال',US:'الولايات المتحدة الأمريكية',MX:'المكسيك',AR:'الأرجنتين',CO:'كولومبيا',PE:'البيرو',CL:'تشيلي',VE:'فنزويلا',PT:'البرتغال',CA:'كندا',AU:'أستراليا',NZ:'نيوزيلندا',AT:'النمسا',CH:'سويسرا',BE:'بلجيكا',BY:'بيلاروسيا',TW:'تايوان',HK:'هونغ كونغ',MO:'ماكاو',PS:'دولة فلسطين',XK:'كوسوفو',PR:'بورتوريكو',VA:'مدينة الفاتيكان',GL:'الأرض الخضراء',FO:'جزر فارو',EH:'الصحراء الغربية',GI:'جبل طارق',BM:'برمودا',KY:'جزر كايمان',IM:'جزيرة آيل أوف مان',GG:'جيرنسي',JE:'جيرسي',AS:'ساموا الأمريكية',GU:'غوام',VI:'جزر فرجن التابعة للولايات المتحدة',NC:'كاليدونيا الجديدة',PF:'بولينيزيا الفرنسية',RE:'ريونيون',MQ:'مارتينيك',GP:'غوادلوب',GF:'جويانا الفرنسية',CK:'جزر كوك',NU:'نيوي',AX:'جزر آلاند',AD:'أندورا',AF:'أفغانستان',AG:'أنتيغوا وبربودا',AO:'أنغولا',BA:'البوسنة والهرسك',BB:'باربادوس',BF:'بوركينا فاسو',BI:'بوروندي',BJ:'بنين',BN:'بروناي',BO:'بوليفيا',BS:'جزر البهاماز',BT:'بوتان',BW:'بوتسوانا',BZ:'بيليز',CD:'جمهورية الكونغو الديمقراطية',CF:'جمهورية أفريقيا الوسطى',CG:'جمهورية الكونغو',CI:'ساحل العاج',CM:'الكاميرون',CR:'كوستاريكا',CU:'كوبا',CV:'الرأس الأخضر',CY:'قبرص',DJ:'جيبوتي',DM:'دومينيكا',DO:'جمهورية الدومينيكان',EC:'الإكوادور',ER:'إريتريا',FJ:'فيجي',FM:'ولايات ميكرونيسيا المتحدة',GA:'الغابون',GD:'غرينادا',GH:'غانا',GM:'غامبيا',GN:'غينيا',GQ:'غينيا الاستوائية',GT:'غواتيمالا',GW:'غينيا بيساو',GY:'غيانا',HN:'الهندوراس',JM:'جامايكا',KG:'قيرغيزستان',KH:'كمبوديا',KI:'كيريباتي',KM:'جزر القمر',KN:'سانت كيتس ونيفيس',KP:'كوريا الشمالية',LA:'لاوس',LC:'سان لوسيا',LI:'ليختنشتاين',LK:'سري لانكا',LR:'ليبيريا',LS:'ليسوتو',LU:'لوكسمبورغ',MC:'موناكو',MD:'مولدوفا',ME:'الجبل الأسود',MG:'مدغشقر',MH:'جزر مارشال',ML:'مالي',MM:'ميانمار',MR:'موريتانيا',MU:'موريشيوس',MV:'جزر المالديف',MW:'ملاوي',MZ:'موزمبيق',NA:'ناميبيا',NE:'النيجر',NI:'نيكاراغوا',NR:'ناورو',PA:'بنما',PG:'بابوا غينيا الجديدة',PW:'بالاو',PY:'باراغواي',RW:'رواندا',SB:'جزر سليمان',SC:'سيشل',SG:'سنغافورة',SL:'سيراليون',SM:'سان مارينو',SN:'السنغال',SR:'سورينام',SS:'جنوب السودان',ST:'سان تومي وبرينسيبي',SV:'السلفادور',SZ:'إيسواتيني',TD:'تشاد',TG:'توغو',TJ:'طاجيكستان',TL:'تيمور الشرقية',TM:'تركمانستان',TO:'تونغا',TT:'ترينداد وتوباجو',TV:'توفالو',TZ:'تنزانيا',UG:'أوغندا',UY:'الأوروغواي',UZ:'أوزباكستان',VC:'سانت فنسنت والغرينادين',VU:'فانواتو',WS:'ساموا',ZM:'زامبيا',ZW:'زيمبابوي',CW:'كوراساو',YT:'مايوت',AI:'أنغويلا',AW:'أروبا',AQ:'أنتاركتيكا',PM:'سان بيار وميكلون',MF:'جماعة القديس مارتن',VG:'جزر فيرجن البريطانية',SX:'سينت مارتن',FK:'جزر فوكلاند',TC:'جزر توركس وكايكوس',MS:'مونتسيرات',TK:'توكيلاو',BL:'سانت بارتيليمي',BQ:'جزر المملكة الهولندية الكاريبية',MP:'جزر ماريانا الشمالية',CC:'جزر كوكوس (كيلينج)',UM:'جزر الولايات المتحدة الصغيرة النائية',BV:'جزيرة بوفيت',CX:'جزيرة كريسماس',HM:'جزيرة هيرد وجزر ماكدونالد',IO:'إقليم المحيط الهندي البريطاني',NF:'جزيرة نورفولك',PN:'جزر بيتكيرن',SH:'سانت هيلينا وأسينشين وتريستان دا كونا',WF:'واليس وفوتونا',
-SU:'الاتحاد السوفيتي',YU:'يوغوسلافيا'};
+SU:'الاتحاد السوفيتي',YU:'يوغوسلافيا',XG:'ألمانيا الشرقية',XC:'تشيكوسلوفاكيا'};
 
 /* Registry of static country-name dicts, keyed by uiLang. Add a new language here once
    its full set has been fetched via test.html — languages NOT in this registry fall back
