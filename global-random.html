@@ -6752,34 +6752,33 @@ async function _drawNextTrack(){
   const _nachziehMs=playDiceSound(); // "nachziehen" — a fresh card is being drawn into contention
   const fresh=await fetchOneCandidate();
   if(fresh) _removeFromPool(fresh); // committed to this draw either way — win or lose, no longer "available" in the general pool
-  /* Show the drawn card immediately, right in the vacated embed-wrapper
-     slot — dimmed, like any other pending preview card (reusing
-     .preview-slot's own resting style rather than inventing a new one;
-     #embed-wrapper has no id/class clash with it). Reported live: "die
-     nachgezogene Karte ist nicht sichtbar" — before this, the fresh
-     candidate existed only as backend data for the whole nachziehen +
-     pause + roll sequence, with nothing on screen confirming a card had
-     actually been drawn until the very end. embed-wrapper's own .empty
-     (added unconditionally at the top of playReady(), before this ever
-     runs) has to come off here too, or the dimmed card would ALSO be
-     invisible (opacity:0 is stronger than the dimming). Gets undone
-     (both the dimming and, if this card didn't win, the content itself)
-     once the roll actually lands — see playReady()'s own call site. */
+  /* Stays .empty (dashed, hidden iframe) for the WHOLE duration of this
+     sound, no matter how fast fetchOneCandidate() resolves — reported
+     live: the card used to pop in as soon as the fetch finished, which
+     on a fast connection could be well before the sound itself had
+     finished playing. "bevor die neue Karte auftaucht muss leer sein in
+     der Zeit wo der Sound spielt": wait out whatever's actually left of
+     THIS throw's real, randomized duration (~1.3-2.3s, see
+     playDiceSound()'s own comment) — fetch latency already eats into
+     that window — before revealing anything. */
+  const _remaining=_nachziehMs-(Date.now()-_t0);
+  if(_remaining>0) await sleep(_remaining);
+  /* Only NOW, with the sound actually finished, show the drawn card —
+     right in the vacated embed-wrapper slot, dimmed like any other
+     pending preview card (reusing .preview-slot's own resting style
+     rather than inventing a new one; #embed-wrapper has no id/class
+     clash with it). embed-wrapper's own .empty (added unconditionally at
+     the top of playReady(), before this ever runs) has to come off here
+     too, or the dimmed card would ALSO be invisible (opacity:0 is
+     stronger than the dimming). Gets undone (both the dimming and, if
+     this card didn't win, the content itself) once the roll actually
+     lands — see playReady()'s own call site. */
   if(fresh){
     EC.loadUri('spotify:track:'+fresh.id);
     $('embed-wrapper').classList.remove('empty','embed-wrapper-blank');
     $('embed-wrapper').classList.add('preview-slot');
   }
-  /* Wait for beat 1's OWN sound to actually finish before the pause and
-     beat 2 — playDiceSound() returns THIS throw's real, randomized
-     duration (~1.3-2.3s, see its own comment), not a fixed length, and
-     fetchOneCandidate()'s latency already eats into that window. Without
-     this, beat 2's sound/animation could start while beat 1 was still
-     audibly rattling — reported live as "the animation starts before
-     the new card is there". Only tops up whatever's actually left. */
-  const _remaining=_nachziehMs-(Date.now()-_t0);
-  if(_remaining>0) await sleep(_remaining);
-  await sleep(350); // kurze Pause — on top, so the two beats read as distinct, not back-to-back
+  await sleep(350); // kurze Pause — after the reveal, before beat 2, so the two beats read as distinct
   const original=queue.slice(); // the BUFFER_SIZE items already queued, each with its real stable .slot
   const contenders=fresh?[...original,fresh]:original; // graceful degrade to a 2-way roll if the fetch failed
   const diceMs=playDiceSound(); // "in Queue auswürfeln" — the real pick
